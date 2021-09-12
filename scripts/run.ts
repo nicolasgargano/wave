@@ -14,6 +14,9 @@ const main = async () => {
     const waveSelfTx = await waveContract.wave()
     await waveSelfTx.wait()
 
+    const waveRandomTx = await waveContract.connect(randomAddress).wave()
+    await waveRandomTx.wait()
+
     const waveCountAfterWaving = await waveContract.getTotalWaves()
 
     console.log(`WaveCountBeforeWaving: ${waveCountBeforeWaving}`)
