@@ -1,0 +1,23 @@
+{
+  "name": "wave-portal",
+  "version": "0.0.1",
+  "description": "say hi",
+  "main": "index.js",
+  "scripts": {
+    "run": "ts-node --files scripts/run.ts"
+  },
+  "author": "Nicolás Gargano",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.9.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.6",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.3"
+  }
+}
