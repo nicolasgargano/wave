@@ -5,7 +5,9 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 
 contract WavePortal {
+    mapping(address => uint) public waves;
     uint totalWaves;
+
     uint accumulatedGas;
 
     constructor() {
@@ -13,6 +15,7 @@ contract WavePortal {
     }
 
     function wave() public {
+        waves[msg.sender] = waves[msg.sender] + 1;
         totalWaves = totalWaves + 1;
         console.log("%s waved!", msg.sender);
         accumulatedGas = accumulatedGas + tx.gasprice;
