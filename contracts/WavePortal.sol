@@ -6,6 +6,7 @@ import "hardhat/console.sol";
 
 contract WavePortal {
     uint totalWaves;
+    uint accumulatedGas;
 
     constructor() {
         console.log("Yo yo, I am a contract and I am smart");
@@ -14,6 +15,7 @@ contract WavePortal {
     function wave() public {
         totalWaves = totalWaves + 1;
         console.log("%s waved!", msg.sender);
+        accumulatedGas = accumulatedGas + tx.gasprice;
     }
 
     function getTotalWaves() view public returns (uint) {
