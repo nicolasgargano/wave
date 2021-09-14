@@ -4,7 +4,8 @@
   "description": "say hi",
   "main": "index.js",
   "scripts": {
-    "run": "ts-node --files scripts/run.ts"
+    "run": "ts-node --files scripts/run.ts",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
   },
   "author": "Nicolás Gargano",
   "license": "BSD-3-Clause",
