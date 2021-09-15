@@ -3,9 +3,17 @@ import {useEffect} from "react"
 import {WavePortal__factory} from "../../typechain"
 import {ethers} from "ethers"
 
+export type Wave = {
+    waver: string,
+    message: string,
+    timestamp: Date
+}
+
 export const App = () => {
     const [currentAccount, setCurrentAccount] = useState<string>()
     const [totalWaves, setTotalWaves] = useState<number>()
+    const [message, setMessage] = useState<string>("")
+    const [allWaves, setAllWaves] = useState<Wave[]>()
 
     const checkIfWalletIsConnected = async () => {
         // @ts-ignore
@@ -31,9 +39,24 @@ export const App = () => {
         }
     }
 
+    const fetchAllWaves = async () => {
+        //@ts-ignore
+        const provider = new ethers.providers.Web3Provider(window.ethereum)
+        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
+
+        const res = await contract.getAllWaves()
+        const mapped = res.map(obj => ({
+            waver: obj.waver,
+            message: obj.message,
+            timestamp: new Date(obj.timestamp.toNumber() * 1000)
+        }))
+        setAllWaves(mapped)
+    }
+
     useEffect(() => {
         checkIfWalletIsConnected()
         updateTotalWaves()
+        fetchAllWaves()
     }, [])
 
     const updateTotalWaves = async () => {
@@ -42,7 +65,6 @@ export const App = () => {
         const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
 
         const res = await contract.getTotalWaves()
-        console.log(res)
         setTotalWaves(res.toNumber())
     }
 
@@ -52,13 +74,11 @@ export const App = () => {
         const signer = provider.getSigner()
         const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-        const waveTx = await contract.wave()
+        const waveTx = await contract.wave(message)
         console.log("Mining...", waveTx.hash)
 
         await waveTx.wait()
         console.log("Mined --", waveTx.hash)
-
-        const count = await contract.getTotalWaves()
     }
 
     return (
@@ -72,7 +92,27 @@ export const App = () => {
                         : <button className="connectAccount" onClick={connectWallet}>Connect account</button>
                 }
                 {totalWaves !== undefined ? <p>Total waves: {totalWaves}</p> : null}
-                <button className="waveButton" onClick={wave}>Wave at Me</button>
+
+                <form onSubmit={e => {
+                    e.preventDefault()
+                    wave()
+                }}>
+                    <textarea value={message} onChange={e => setMessage(e.target.value)}/>
+                    <button type={"submit"}>Wave at Me</button>
+                </form>
+
+                <div>
+                    {allWaves
+                        ?.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())
+                        .map((wave) => (
+                            <div key={`wave-${wave.timestamp.getTime()}-${wave.waver}`}>
+                                <h3>{wave.waver}</h3>
+                                <p>{wave.message}</p>
+                                <pre>{wave.timestamp.getTime()}</pre>
+                            </div>
+                        ))}
+                </div>
+
             </main>
         </div>
     )
