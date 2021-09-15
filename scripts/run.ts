@@ -28,6 +28,9 @@ const main = async () => {
     console.log(`WaveCountAfterWaving: ${waveCountAfterWaving}`)
     console.log(`Contract balance after waves: ${contractBalanceAfterWaves}`)
     console.table(allWaves)
+
+    const waveSelfTx2 = await waveContract.wave("A message!")
+    await waveSelfTx2.wait()
 }
 
 main()
