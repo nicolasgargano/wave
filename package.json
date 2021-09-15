@@ -6,8 +6,8 @@
   "scripts": {
     "build:vercel": "run-s web:build",
     "run": "ts-node --files scripts/run.ts",
-    "deploy:local": "dotenv hardhat run scripts/deploy.ts --network localhost",
-    "deploy:rinkeby": "dotenv hardhat run scripts/deploy.ts --network rinkeby",
+    "deploy:local": "dotenv -- hardhat run scripts/deploy.ts --network localhost",
+    "deploy:rinkeby": "dotenv -- hardhat run scripts/deploy.ts --network rinkeby",
     "web:dev": "vite",
     "web:build": "vite build"
   },
