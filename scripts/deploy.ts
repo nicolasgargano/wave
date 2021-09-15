@@ -3,6 +3,9 @@ import {run, ethers} from "hardhat"
 const main = async () => {
     const [deployer] = await ethers.getSigners()
 
+    // @ts-ignore
+    console.log(`Using network ${network.name}`)
+
     console.log(`Deploying contracts with the account: ${deployer.address}`)
 
     const accountBalance = await deployer.getBalance()
