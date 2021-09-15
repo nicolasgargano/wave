@@ -11,16 +11,18 @@ const main = async () => {
 
     const waveCountBeforeWaving = await waveContract.getTotalWaves()
 
-    const waveSelfTx = await waveContract.wave()
+    const waveSelfTx = await waveContract.wave("A message!")
     await waveSelfTx.wait()
 
-    const waveRandomTx = await waveContract.connect(randomAddress).wave()
+    const waveRandomTx = await waveContract.connect(randomAddress).wave("Another message!")
     await waveRandomTx.wait()
 
     const waveCountAfterWaving = await waveContract.getTotalWaves()
+    const allWaves = await waveContract.getAllWaves()
 
     console.log(`WaveCountBeforeWaving: ${waveCountBeforeWaving}`)
     console.log(`WaveCountAfterWaving: ${waveCountAfterWaving}`)
+    console.table(allWaves)
 }
 
 main()
