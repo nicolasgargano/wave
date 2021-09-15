@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build:vercel": "run-s web:build",
-    "run": "ts-node --files scripts/run.ts",
+    "run": "dotenv -- ts-node --files scripts/run.ts",
+    "compile": "dotenv -- hardhat compile",
     "deploy:local": "dotenv -- hardhat run scripts/deploy.ts --network localhost",
     "deploy:rinkeby": "dotenv -- hardhat run scripts/deploy.ts --network rinkeby",
     "web:dev": "vite",
