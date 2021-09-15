@@ -11,10 +11,11 @@ const main = async () => {
     const accountBalance = await deployer.getBalance()
     console.log(`Account balance: ${accountBalance.toString()}`)
 
-    const Token = await ethers.getContractFactory("WavePortal")
-    const token = await Token.deploy()
+    const wavePortalFactory = await ethers.getContractFactory("WavePortal")
+    const waveContract = await wavePortalFactory.deploy({value: ethers.utils.parseEther("0.01")})
+    await waveContract.deployed()
 
-    console.log(`WavePortal address: ${token.address}`)
+    console.log(`WavePortal address: ${waveContract.address}`)
 }
 
 main()
