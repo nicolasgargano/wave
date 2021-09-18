@@ -103,7 +103,7 @@ export const Wave = () => {
 
                 <div>
                     {allWaves
-                        ?.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())
+                        ?.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
                         .map((wave) => (
                             <div key={`wave-${wave.timestamp.getTime()}-${wave.waver}`}>
                                 <h3>{wave.waver}</h3>

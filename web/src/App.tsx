@@ -1,6 +1,7 @@
 import React, {useState} from "react"
-import { Wave } from "./Wave"
+import {Scene} from "./Scene"
+import {Wave} from "./Wave"
 
 export const App = () => {
-    return <Wave/>
+    return <Scene/>
 }
