@@ -1,34 +1,33 @@
-import React, {FC, useEffect, useRef} from "react"
+import {FC, useEffect} from "react"
+import {GroupProps} from "@react-three/fiber"
+import React from "react"
 import {useGLTF} from "@react-three/drei"
-import {MeshProps} from "@react-three/fiber"
 
-export type TVProps = MeshProps
+export type TVProps = GroupProps
 
-export const Tv: FC<TVProps> = ({...props}) => {
+export const Tv: FC<TVProps> = ({position, ...props}) => {
     // it's 4:3 ish
     const screenWidth = 0.367619
     const screenHeight = 0.279729
     const ratio = 1.31419695491
 
-    const group = useRef()
     //@ts-ignore
     const {nodes, materials} = useGLTF("/tv/Television_01_4k.gltf", true)
+
     useEffect(() => {
         console.log(nodes)
+        console.log(materials)
     })
     return (
-        <>
-            <group ref={group} dispose={null} scale={4}>
-                <mesh
-                    castShadow
-                    receiveShadow
-                    geometry={nodes.Television_01.geometry}
-                    material={nodes.Television_01.material}
-                    position={[0, 0, -0.5]}
-                >
-                </mesh>
-            </group>
-        </>
+        <group dispose={null} scale={4} position={position} {...props}>
+            <mesh
+                castShadow
+                receiveShadow
+                geometry={nodes.Television_01.geometry}
+                material={nodes.Television_01.material}
+            >
+            </mesh>
+        </group>
     )
 }
 

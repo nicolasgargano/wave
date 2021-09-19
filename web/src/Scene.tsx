@@ -59,7 +59,7 @@ export const Scene = () => {
                     <spotLight position={[0, 10, 0]} intensity={0.3}/>
                     <directionalLight position={[-20, 0, -10]} intensity={0.7}/>
                     {!debug && <Intro start={ready && clicked} set={setReady}/>}
-                    <Tv/>
+                    <Tv position={[0,0,-0.5]}/>
                 </Suspense>
                 {debug && <OrbitControls/>}
             </Canvas>
