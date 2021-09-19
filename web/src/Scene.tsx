@@ -39,6 +39,35 @@ const Intro: FC<IntroProps> = ({start, set}) => {
     })
 }
 
+const CanvasTextureTest = () => {
+
+    const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+    const texture = useCanvasTexture(canvasRef.current)
+
+    useEffect(() => {
+        // const canvas: HTMLCanvasElement = document.getElementById("texcanvas")! as HTMLCanvasElement
+        const canvas: HTMLCanvasElement = document.createElement("canvas")
+        canvasRef.current = canvas
+        canvas.width = 400
+        canvas.height = 400
+        canvas.hidden = true
+        const ctx = canvas.getContext("2d")!
+
+        ctx.fillStyle="red"
+        ctx.fillRect(10, 10, 100, 100)
+        ctx.beginPath()
+        ctx.arc(95, 50, 40, 0, 2 * Math.PI)
+        ctx.stroke()
+    })
+
+    return (
+        <Box>
+            <meshStandardMaterial color="white" map={texture}/>
+        </Box>
+    )
+}
+
 export const Scene = () => {
     const [clicked, setClicked] = useState(true)
     const [ready, setReady] = useState(false)
