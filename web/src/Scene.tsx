@@ -1,12 +1,16 @@
 import * as THREE from "three"
-import React, {FC, Suspense, useEffect, useMemo, useState} from "react"
-import {Canvas, useFrame} from "@react-three/fiber"
-import {Reflector, useTexture, OrbitControls} from "@react-three/drei"
-import {Vector2} from "three"
+import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
+import {Canvas, useFrame, useThree} from "@react-three/fiber"
+import {Reflector, useTexture, OrbitControls, Box, Stats} from "@react-three/drei"
+import {Color, Vector2, Vector3} from "three"
 //@ts-ignore
 import {BlendFunction} from "postprocessing"
 import {WaveText} from "./components/WaveText"
 import {Tv} from "./components/Tv"
+import P5 from "p5"
+import {useCanvasTexture} from "./hooks/useCanvasTexture"
+import {TvParts} from "./components/TvParts"
+import {useControls} from "leva"
 
 
 const Ground = () => {
@@ -14,7 +18,7 @@ const Ground = () => {
     const normalScale = useMemo(() => new Vector2(1, 1), [])
     return (
         <Reflector resolution={512} args={[10, 10]} mirror={0.4} mixBlur={8} mixStrength={1}
-            rotation={[-Math.PI / 2, 0, Math.PI / 2]} blur={[400, 100]}>
+            rotation={[-Math.PI / 2, 0, -Math.PI / 2]} blur={[400, 100]}>
             {(Material, props) => <Material color="#a0a0a0" metalness={0.4} roughnessMap={floor} normalMap={normal}
                 normalScale={normalScale} {...props} />}
         </Reflector>
@@ -42,11 +46,9 @@ const Intro: FC<IntroProps> = ({start, set}) => {
 const CanvasTextureTest = () => {
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
     const texture = useCanvasTexture(canvasRef.current)
 
     useEffect(() => {
-        // const canvas: HTMLCanvasElement = document.getElementById("texcanvas")! as HTMLCanvasElement
         const canvas: HTMLCanvasElement = document.createElement("canvas")
         canvasRef.current = canvas
         canvas.width = 400
@@ -73,6 +75,8 @@ export const Scene = () => {
     const [ready, setReady] = useState(false)
     const store = {clicked, setClicked, ready, setReady}
     const debug = false
+    const lookAt = useMemo(() => new Vector3(0,0,0), [])
+
     return (
         <>
             <Canvas camera={{position: [0, 3, 100], fov: 15}}>
@@ -85,12 +89,12 @@ export const Scene = () => {
                         <Ground/>
                     </group>
                     <ambientLight intensity={0.5}/>
-                    <spotLight position={[0, 10, 0]} intensity={0.3}/>
-                    <directionalLight position={[-20, 0, -10]} intensity={0.7}/>
+                    <spotLight position={[-1, 2, 7]} intensity={0.2}/>
                     {!debug && <Intro start={ready && clicked} set={setReady}/>}
-                    <Tv position={[0,0,-0.5]}/>
+                    <Tv position={[0,-1,-0.5]}/>
                 </Suspense>
                 {debug && <OrbitControls/>}
+                {debug && <Stats/>}
             </Canvas>
         </>
     )
