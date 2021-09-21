@@ -74,17 +74,15 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
         }
 
         p5.draw = () => {
-            p5.image(
-                originalScreenGraphicsRef.current!,           // source image
-                screenX1,              // destination x
-                screenY1,              // destination y
+            screenContentsGraphicsRef.current!.image(
+                originalScreenGraphicsRef.current!,
+                0,
+                0
             )
 
             const t = p5.millis() / 1000
             const r = Math.abs(Math.sin(t)) * 255
 
-
-            screenContentsGraphicsRef.current?.clear()
             screenContentsGraphicsRef.current?.fill(r, 0, 0)
             screenContentsGraphicsRef.current!.rect(
                 r,
