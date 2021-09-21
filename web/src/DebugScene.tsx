@@ -5,7 +5,8 @@ import P5 from "p5"
 //@ts-ignore
 import vertUrl from "./../assets/shaders/vertex.vert?url"
 //@ts-ignore
-import fragUrl from "./../assets/shaders/frag.frag?url"
+import fragUrl from "./../assets/shaders/frag.glsl?url"
+import {text} from "stream/consumers"
 
 const [screenX1, screenY1] = [148, 4096 - 1159]
 const [screenX2, screenY2] = [1403, 4096 - 211]
@@ -23,25 +24,46 @@ export const DebugScene = () => {
 }
 
 const sketch = (p5: P5) => {
-    let shader : P5.Shader | undefined
-    let font : P5.Font | undefined
+    let shader: P5.Shader | undefined
+    let font: P5.Font | undefined
+
+    let textGraphics: P5.Graphics | undefined
+    let rendererCanvas: P5.Renderer | undefined
 
     p5.preload = () => {
         shader = p5.loadShader(vertUrl, fragUrl)
-        font = p5.loadFont("/Inter-Bold.ttf")
+        font = p5.loadFont("/VT323-Regular.ttf")
     }
 
     p5.setup = () => {
         p5.pixelDensity(1)
-        const renderer = p5.createCanvas(screenWidth, screenHeight, p5.WEBGL)
+        rendererCanvas = p5.createCanvas(screenWidth, screenHeight, p5.WEBGL)
+        textGraphics = p5.createGraphics(screenWidth, screenHeight)
+        textGraphics?.textFont(font!)
     }
 
     p5.draw = () => {
-        const t = p5.millis() / 1000
+        const textLayer = textGraphics!
 
-        const c = Math.abs(Math.sin(t)) * 255
+        const time = p5.millis() / 1000
+        const frame = p5.frameCount
+        const c = Math.abs(Math.sin(time)) * 255
+
+
+        textLayer.fill(30, 0,30)
+        textLayer.background(0)
+
+        textLayer.textSize(100)
+        textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
+        textLayer.fill(255, 0, 255)
+        textLayer.text("Hello!", 30, 30)
+
+        shader?.setUniform("u_resolution", [screenWidth, screenHeight])
+        shader?.setUniform("u_time", time)
+        shader?.setUniform("u_frame", frame)
+        shader?.setUniform("u_textLayer", textLayer)
 
         p5.shader(shader)
-        p5.rect(0,0, 200, 200)
+        p5.rect(0, 0, 0, 0)
     }
 }
