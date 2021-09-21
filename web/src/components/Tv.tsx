@@ -3,6 +3,7 @@ import {GroupProps, useFrame} from "@react-three/fiber"
 import React from "react"
 import {Box, useGLTF, useTexture} from "@react-three/drei"
 import {CanvasTexture, Color, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
+import P5, {Graphics, Renderer} from "p5"
 
 export type TVProps = GroupProps
 
@@ -12,49 +13,114 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
     const screenHeight = 0.279729
     const ratio = 1.31419695491
     const [sx, sy, sw, sh] = [150, 2930, 1250, 950]
-
     //@ts-ignore
     const {nodes, materials} = useGLTF("/tv/Television_01_4k.gltf", true)
 
-    const canvasRef = useRef<HTMLCanvasElement | null>(null)
-    const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
-    const texRef = useRef<Texture | null>(null)
+    // top-left and bottom-right corners of the screen in the albedo/diffuse texture
+    // these values come from viewing the UV coordinates in blender
+    const [screenX1, screenY1] = [148, 4096 - 1159]
+    const [screenX2, screenY2] = [1403, 4096 - 211]
+
+    const screenContentsGraphicsRef = useRef<Graphics | null>(null)
+    const originalScreenGraphicsRef = useRef<Graphics | null>(null)
+    const finalDiffuseTextureRef = useRef<Texture | null>(null)
+
+    const sketch = (p5: P5) => {
+        p5.setup = () => {
+            // Setup the final texture
+            const finalDiffuseRenderer = p5.createCanvas(4096, 4096)
+
+            //@ts-ignore
+            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
+            const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
+            ctx.canvas.hidden = true
+
+            // Copy the entire original diffuse texture
+            const material = nodes.Television_01.material as MeshStandardMaterial
+            const diffuseMap = material.map?.image
+            ctx.drawImage(diffuseMap, 0, 0)
+            ctx.rotate(Math.PI)
+
+            const tex = new CanvasTexture(ctx.canvas)
+            tex.encoding = sRGBEncoding
+            tex.flipY = false
+            material.map = tex
+            finalDiffuseTextureRef.current = tex
+
+            // Setup the offscreen buffers
+            const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
+
+            const originalScreenGraphics = p5.createGraphics(screenWidth, screenHeight)
+            originalScreenGraphicsRef.current = originalScreenGraphics
+
+            const screenContentsGraphics = p5.createGraphics(screenWidth, screenHeight)
+            screenContentsGraphicsRef.current = screenContentsGraphics
+
+            // @ts-ignore
+            const screenContentsCtx: CanvasRenderingContext2D = screenContentsGraphics.drawingContext
+            screenContentsCtx.translate(screenWidth, screenHeight)
+            screenContentsCtx.rotate(Math.PI)
+
+
+            // Copy the screen section of the original texture to the buffer
+            // @ts-ignore
+            const originalScreenCtx: CanvasRenderingContext2D = originalScreenGraphics.drawingContext
+            originalScreenCtx.drawImage(diffuseMap, screenX1, screenY1, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight)
+
+            // Styles
+            p5.textSize(100)
+            p5.fill(255, 255, 255)
+            screenContentsGraphics.textSize(100)
+        }
+
+        p5.draw = () => {
+            p5.image(
+                originalScreenGraphicsRef.current!,           // source image
+                screenX1,              // destination x
+                screenY1,              // destination y
+            )
+
+            const t = p5.millis() / 1000
+            const r = Math.abs(Math.sin(t)) * 255
+
+
+            screenContentsGraphicsRef.current?.clear()
+            screenContentsGraphicsRef.current?.fill(r, 0, 0)
+            screenContentsGraphicsRef.current!.rect(
+                r,
+                0,
+                200,
+                200
+            )
+
+            screenContentsGraphicsRef.current!.text(
+                "The quick brown fox",
+                50,
+                400,
+            )
+
+
+            p5.fill(0, r, 0)
+            p5.rect(
+                0, 0, 100, 100
+            )
+
+            p5.image(
+                screenContentsGraphicsRef.current!,
+                screenX1,
+                screenY1
+            )
+
+            if (finalDiffuseTextureRef.current)
+                finalDiffuseTextureRef.current.needsUpdate = true
+        }
+    }
 
     useEffect(() => {
+        const p5 = new P5(sketch)
+
         console.log(nodes)
         console.log(materials)
-
-        const canvas = document.createElement("canvas")
-        canvasRef.current = canvas
-        canvas.hidden = false
-        canvas.width = 4096
-        canvas.height = 4096
-
-        const ctx = canvas.getContext("2d")!
-        ctxRef.current = ctx
-
-        const mat = nodes.Television_01.material as MeshStandardMaterial
-        ctx.drawImage(mat.map?.image, 0, 0)
-
-        const tex = new CanvasTexture(canvas)
-        texRef.current = tex
-        tex.encoding = sRGBEncoding
-        tex.flipY = false
-        mat.map = tex
-    })
-
-    useFrame((data) => {
-        if (canvasRef.current && ctxRef.current) {
-            const t = data.clock.getElapsedTime()
-            const r = Math.abs(Math.sin(t*2) * 150)
-            const g = 0
-            const b = 0
-            ctxRef.current.fillStyle = `rgb(${r}, ${g}, ${b}`
-            ctxRef.current.fillRect(sx, sy, sw, sh)
-
-            if (texRef.current)
-                texRef.current.needsUpdate = true
-        }
     })
 
     return (

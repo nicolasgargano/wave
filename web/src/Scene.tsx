@@ -74,7 +74,7 @@ export const Scene = () => {
     const [clicked, setClicked] = useState(true)
     const [ready, setReady] = useState(false)
     const store = {clicked, setClicked, ready, setReady}
-    const debug = false
+    const debug = true
     const lookAt = useMemo(() => new Vector3(0,0,0), [])
 
     return (
