@@ -1,7 +1,11 @@
-import { defineConfig } from 'vite'
-import reactRefresh from '@vitejs/plugin-react-refresh'
+import {defineConfig} from "vite"
+import reactRefresh from "@vitejs/plugin-react-refresh"
+import liveReload from "vite-plugin-live-reload"
 
 export default defineConfig({
     root: "web",
-    plugins: [reactRefresh()],
+    plugins: [
+        liveReload(["./assets/**/*"]),
+        reactRefresh()
+    ],
 })
