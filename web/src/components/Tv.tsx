@@ -1,5 +1,5 @@
 import {FC, useEffect, useRef, useState} from "react"
-import {GroupProps, useFrame} from "@react-three/fiber"
+import {GroupProps, useFrame, useThree} from "@react-three/fiber"
 import React from "react"
 import {Box, useGLTF, useTexture} from "@react-three/drei"
 import {CanvasTexture, Color, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
@@ -8,10 +8,6 @@ import P5, {Graphics, Renderer} from "p5"
 export type TVProps = GroupProps
 
 export const Tv: FC<TVProps> = ({position, ...props}) => {
-    // it's 4:3 ish
-    const screenWidth = 0.367619
-    const screenHeight = 0.279729
-    const ratio = 1.31419695491
     const [sx, sy, sw, sh] = [150, 2930, 1250, 950]
     //@ts-ignore
     const {nodes, materials} = useGLTF("/tv/Television_01_4k.gltf", true)
@@ -20,20 +16,25 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
     // these values come from viewing the UV coordinates in blender
     const [screenX1, screenY1] = [148, 4096 - 1159]
     const [screenX2, screenY2] = [1403, 4096 - 211]
+    const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
 
-    const screenContentsGraphicsRef = useRef<Graphics | null>(null)
     const originalScreenGraphicsRef = useRef<Graphics | null>(null)
+    const screenContentsGraphicsRef = useRef<Graphics | null>(null)
+    const screenContentsTextureRef = useRef<Texture | null>(null)
     const finalDiffuseTextureRef = useRef<Texture | null>(null)
+    const screenContentsPosRef = useRef(new Vector2(screenX1, screenY1))
+
+    const gl = useThree(three => three.gl)
 
     const sketch = (p5: P5) => {
         p5.setup = () => {
             // Setup the final texture
-            const finalDiffuseRenderer = p5.createCanvas(4096, 4096)
+            p5.pixelDensity(1)
+            const finalDiffuseRenderer = p5.createGraphics(4096, 4096)
 
             //@ts-ignore
             //  this property does exist https://p5js.org/reference/#/p5/drawingContext
             const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
-            ctx.canvas.hidden = true
 
             // Copy the entire original diffuse texture
             const material = nodes.Television_01.material as MeshStandardMaterial
@@ -48,7 +49,6 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
             finalDiffuseTextureRef.current = tex
 
             // Setup the offscreen buffers
-            const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
 
             const originalScreenGraphics = p5.createGraphics(screenWidth, screenHeight)
             originalScreenGraphicsRef.current = originalScreenGraphics
@@ -57,13 +57,21 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
             screenContentsGraphicsRef.current = screenContentsGraphics
 
             // @ts-ignore
+            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
             const screenContentsCtx: CanvasRenderingContext2D = screenContentsGraphics.drawingContext
             screenContentsCtx.translate(screenWidth, screenHeight)
             screenContentsCtx.rotate(Math.PI)
 
+            const screenContentsTex = new CanvasTexture(screenContentsCtx.canvas)
+            screenContentsTextureRef.current = screenContentsTex
+            screenContentsTex.encoding = sRGBEncoding
+            screenContentsTex.flipY = false
+
 
             // Copy the screen section of the original texture to the buffer
+
             // @ts-ignore
+            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
             const originalScreenCtx: CanvasRenderingContext2D = originalScreenGraphics.drawingContext
             originalScreenCtx.drawImage(diffuseMap, screenX1, screenY1, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight)
 
@@ -96,15 +104,11 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
                 50,
                 400,
             )
-
-            p5.image(
-                screenContentsGraphicsRef.current!,
-                screenX1,
-                screenY1
+            gl.copyTextureToTexture(
+                screenContentsPosRef.current,
+                screenContentsTextureRef.current!,
+                finalDiffuseTextureRef.current!
             )
-
-            if (finalDiffuseTextureRef.current)
-                finalDiffuseTextureRef.current.needsUpdate = true
         }
     }
 
