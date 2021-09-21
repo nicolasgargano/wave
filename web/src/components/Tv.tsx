@@ -52,6 +52,7 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
         }
 
         p5.setup = () => {
+            p5.noCanvas()
             p5.pixelDensity(1)
 
 
