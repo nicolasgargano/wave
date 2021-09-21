@@ -5,7 +5,6 @@ import {Box, useGLTF, useTexture} from "@react-three/drei"
 import {CanvasTexture, Color, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
 import P5, {Graphics, Renderer} from "p5"
 
-export type TVProps = GroupProps
 
 //@ts-ignore
 import vertUrl from "../../assets/shaders/vertex.vert?url"
@@ -19,6 +18,8 @@ export const tvScreenShader = {
     vertexUrl: vertUrl,
     fragmentUrl: fragUrl
 }
+
+export type TVProps = GroupProps
 
 export const Tv: FC<TVProps> = ({position, ...props}) => {
     const [sx, sy, sw, sh] = [150, 2930, 1250, 950]

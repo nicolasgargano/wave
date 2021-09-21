@@ -2,7 +2,7 @@ import * as THREE from "three"
 import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
 import {Canvas, useFrame, useThree} from "@react-three/fiber"
 import {Reflector, useTexture, OrbitControls, Box, Stats} from "@react-three/drei"
-import {Color, Vector2, Vector3} from "three"
+import {Color, Mesh, Vector2, Vector3} from "three"
 //@ts-ignore
 import {BlendFunction} from "postprocessing"
 import {WaveText} from "./components/WaveText"
@@ -56,7 +56,7 @@ const CanvasTextureTest = () => {
         canvas.hidden = true
         const ctx = canvas.getContext("2d")!
 
-        ctx.fillStyle="red"
+        ctx.fillStyle = "red"
         ctx.fillRect(10, 10, 100, 100)
         ctx.beginPath()
         ctx.arc(95, 50, 40, 0, 2 * Math.PI)
@@ -74,8 +74,8 @@ export const Scene = () => {
     const [clicked, setClicked] = useState(true)
     const [ready, setReady] = useState(false)
     const store = {clicked, setClicked, ready, setReady}
-    const debug = true
-    const lookAt = useMemo(() => new Vector3(0,0,0), [])
+    const debug = false
+    const lookAt = useMemo(() => new Vector3(0, 0, 0), [])
 
     return (
         <>
@@ -91,11 +91,37 @@ export const Scene = () => {
                     <ambientLight intensity={0.5}/>
                     <spotLight position={[-1, 2, 7]} intensity={0.2}/>
                     {!debug && <Intro start={ready && clicked} set={setReady}/>}
-                    <Tv position={[0,-1,-0.5]}/>
+                    <FloatingTV/>
                 </Suspense>
                 {debug && <OrbitControls/>}
                 {debug && <Stats/>}
             </Canvas>
         </>
+    )
+}
+
+export const FloatingTV = () => {
+    const tvRef = useRef()
+
+    useFrame((state) => {
+        const t = state.clock.getElapsedTime()
+        if (tvRef.current) {
+            //@ts-ignore
+            tvRef.current.rotation.x = THREE.MathUtils.lerp(tvRef.current.rotation.x, Math.cos(t / 2) / 10, 0.1)
+            //@ts-ignore
+            tvRef.current.rotation.y = THREE.MathUtils.lerp(tvRef.current.rotation.y, Math.sin(t / 4) / 10, 0.1)
+            //@ts-ignore
+            tvRef.current.rotation.z = THREE.MathUtils.lerp(tvRef.current.rotation.z, Math.sin(t / 4) / 20, 0.1)
+            //@ts-ignore
+            tvRef.current.position.y = THREE.MathUtils.lerp(tvRef.current.position.y, (-5 + Math.sin(t)) / 5, 0.1)
+        }
+    })
+
+    return (
+        <group position={[0,0.5,0]}>
+            <group ref={tvRef} position={[0, -1, -0.5]}>
+                <Tv/>
+            </group>
+        </group>
     )
 }
