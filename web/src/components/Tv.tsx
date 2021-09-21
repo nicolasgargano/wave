@@ -7,6 +7,19 @@ import P5, {Graphics, Renderer} from "p5"
 
 export type TVProps = GroupProps
 
+//@ts-ignore
+import vertUrl from "../../assets/shaders/vertex.vert?url"
+//@ts-ignore
+import fragUrl from "../../assets/shaders/frag.glsl?url"
+
+export const [screenX1, screenY1] = [148, 4096 - 1159]
+export const [screenX2, screenY2] = [1403, 4096 - 211]
+export const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
+export const tvScreenShader = {
+    vertexUrl: vertUrl,
+    fragmentUrl: fragUrl
+}
+
 export const Tv: FC<TVProps> = ({position, ...props}) => {
     const [sx, sy, sw, sh] = [150, 2930, 1250, 950]
     //@ts-ignore
@@ -14,26 +27,36 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
 
     // top-left and bottom-right corners of the screen in the albedo/diffuse texture
     // these values come from viewing the UV coordinates in blender
-    const [screenX1, screenY1] = [148, 4096 - 1159]
-    const [screenX2, screenY2] = [1403, 4096 - 211]
-    const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
 
-    const originalScreenGraphicsRef = useRef<Graphics | null>(null)
     const screenContentsGraphicsRef = useRef<Graphics | null>(null)
     const screenContentsTextureRef = useRef<Texture | null>(null)
-    const finalDiffuseTextureRef = useRef<Texture | null>(null)
+
+    const textGraphicsRef = useRef<Graphics | null>(null)
+    const originalScreenGraphicsRef = useRef<Graphics | null>(null)
+
     const screenContentsPosRef = useRef(new Vector2(screenX1, screenY1))
+    const finalDiffuseTextureRef = useRef<Texture | null>(null)
 
     const gl = useThree(three => three.gl)
 
-    const sketch = (p5: P5) => {
-        p5.setup = () => {
-            // Setup the final texture
-            p5.pixelDensity(1)
-            const finalDiffuseRenderer = p5.createGraphics(4096, 4096)
+    const msg = useRef<string>(new Array(25).fill("WAVE").join(" "))
 
-            //@ts-ignore
-            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
+    const sketch = (p5: P5) => {
+        let shader : P5.Shader | undefined
+        let font : P5.Font | undefined
+
+        p5.preload = () => {
+            shader = p5.loadShader(tvScreenShader.vertexUrl, tvScreenShader.fragmentUrl)
+            font = p5.loadFont("/VT323-Regular.ttf")
+        }
+
+        p5.setup = () => {
+            p5.pixelDensity(1)
+
+
+            // -- TV TEXTURE
+            const finalDiffuseRenderer = p5.createGraphics(4096, 4096)
+            //@ts-ignore,  this property does exist https://p5js.org/reference/#/p5/drawingContext
             const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
 
             // Copy the entire original diffuse texture
@@ -42,68 +65,77 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
             ctx.drawImage(diffuseMap, 0, 0)
             ctx.rotate(Math.PI)
 
+            // Create the texture
             const tex = new CanvasTexture(ctx.canvas)
             tex.encoding = sRGBEncoding
             tex.flipY = false
             material.map = tex
             finalDiffuseTextureRef.current = tex
 
-            // Setup the offscreen buffers
 
-            const originalScreenGraphics = p5.createGraphics(screenWidth, screenHeight)
-            originalScreenGraphicsRef.current = originalScreenGraphics
-
-            const screenContentsGraphics = p5.createGraphics(screenWidth, screenHeight)
+            // -- SCREEN BUFFERS
+            const textGraphics = p5.createGraphics(screenWidth, screenHeight)
+            textGraphicsRef.current = textGraphics
+            const screenContentsGraphics = p5.createGraphics(screenWidth, screenHeight, p5.WEBGL)
             screenContentsGraphicsRef.current = screenContentsGraphics
 
-            // @ts-ignore
-            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
-            const screenContentsCtx: CanvasRenderingContext2D = screenContentsGraphics.drawingContext
-            screenContentsCtx.translate(screenWidth, screenHeight)
-            screenContentsCtx.rotate(Math.PI)
 
-            const screenContentsTex = new CanvasTexture(screenContentsCtx.canvas)
+            // -- SCREEN TEXTURE
+            const screenContentsTex = new CanvasTexture(screenContentsGraphics.drawingContext.canvas)
             screenContentsTextureRef.current = screenContentsTex
             screenContentsTex.encoding = sRGBEncoding
             screenContentsTex.flipY = false
 
 
             // Copy the screen section of the original texture to the buffer
-
-            // @ts-ignore
-            //  this property does exist https://p5js.org/reference/#/p5/drawingContext
+            const originalScreenGraphics = p5.createGraphics(screenWidth, screenHeight)
+            originalScreenGraphicsRef.current = originalScreenGraphics
+            //@ts-ignore, this property does exist https://p5js.org/reference/#/p5/drawingContext
             const originalScreenCtx: CanvasRenderingContext2D = originalScreenGraphics.drawingContext
             originalScreenCtx.drawImage(diffuseMap, screenX1, screenY1, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight)
 
-            // Styles
-            p5.textSize(100)
-            p5.fill(255, 255, 255)
-            screenContentsGraphics.textSize(100)
+
+            // -- TEXT STYLES
+
+
+            textGraphics.textSize(100)
+            textGraphics.fill(255,0,0)
+            textGraphics.textAlign(textGraphics.LEFT, textGraphics.TOP)
+            textGraphics.textFont(font!)
+
+            // -- SHADER SETUP
+            shader?.setUniform("u_resolution", [screenWidth, screenHeight])
+            shader?.setUniform("u_original_screen_texture", originalScreenGraphics!)
         }
 
         p5.draw = () => {
-            screenContentsGraphicsRef.current!.image(
-                originalScreenGraphicsRef.current!,
-                0,
-                0
-            )
+            const screenContents = screenContentsGraphicsRef.current!
+            const textLayer = textGraphicsRef.current!
+            const originalScreenGraphics = originalScreenGraphicsRef.current!
+            const padding = 100
 
-            const t = p5.millis() / 1000
-            const r = Math.abs(Math.sin(t)) * 255
+            textLayer.background(30, 0, 30)
+            textLayer.fill(255,0,255)
 
-            screenContentsGraphicsRef.current?.fill(r, 0, 0)
-            screenContentsGraphicsRef.current!.rect(
-                r,
-                0,
-                200,
-                200
-            )
+            textLayer.text(msg.current, padding, padding, screenWidth-padding, screenHeight-padding)
 
-            screenContentsGraphicsRef.current!.text(
-                "The quick brown fox",
-                50,
-                400,
-            )
+            // SHADER STUFF
+            const time = p5.millis()/1000
+            const frame = p5.frameCount
+
+            shader?.setUniform("u_time", time)
+            shader?.setUniform("u_frame", frame)
+            shader?.setUniform("u_text_layer", textLayer)
+            shader?.setUniform("u_resolution", [screenWidth, screenHeight])
+            shader?.setUniform("u_original_screen_texture", originalScreenGraphics)
+
+            screenContents.shader(shader)
+            // screenContents.fill(255,0,0)
+            screenContents.rect(0,0,screenWidth,screenHeight)
+
+            screenContents.image(textLayer, 0, 0)
+
+            // COPY TO TV TEXTURE
             gl.copyTextureToTexture(
                 screenContentsPosRef.current,
                 screenContentsTextureRef.current!,
