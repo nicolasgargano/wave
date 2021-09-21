@@ -97,12 +97,6 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
                 400,
             )
 
-
-            p5.fill(0, r, 0)
-            p5.rect(
-                0, 0, 100, 100
-            )
-
             p5.image(
                 screenContentsGraphicsRef.current!,
                 screenX1,
