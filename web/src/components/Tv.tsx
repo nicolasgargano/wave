@@ -150,7 +150,7 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
 
         console.log(nodes)
         console.log(materials)
-    })
+    }, [])
 
     return (
         <group dispose={null} scale={4} position={position} {...props}>
