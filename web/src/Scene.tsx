@@ -1,16 +1,16 @@
 import * as THREE from "three"
 import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
 import {Canvas, useFrame, useThree} from "@react-three/fiber"
-import {Reflector, useTexture, OrbitControls, Box, Stats} from "@react-three/drei"
+import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
 import {Color, Mesh, Vector2, Vector3} from "three"
 //@ts-ignore
 import {BlendFunction} from "postprocessing"
 import {WaveText} from "./components/WaveText"
-import {Tv} from "./components/Tv"
-import P5 from "p5"
+import {Tv, TVDisplayState} from "./components/Tv"
 import {useCanvasTexture} from "./hooks/useCanvasTexture"
-import {TvParts} from "./components/TvParts"
-import {useControls} from "leva"
+import {Wave} from "./Wave"
+import {ethers} from "ethers"
+import {WavePortal__factory} from "../../typechain"
 
 
 const Ground = () => {
@@ -74,7 +74,7 @@ export const Scene = () => {
     const [clicked, setClicked] = useState(true)
     const [ready, setReady] = useState(false)
     const store = {clicked, setClicked, ready, setReady}
-    const debug = false
+    const debug = true
     const lookAt = useMemo(() => new Vector3(0, 0, 0), [])
 
     return (
@@ -102,6 +102,15 @@ export const Scene = () => {
 
 export const FloatingTV = () => {
     const tvRef = useRef()
+    const [tvState, setTvState] = useState<TVDisplayState>({_type: "waves"})
+
+    const [message, setMessage] = useState<string>("")
+    const [currentAccount, setCurrentAccount] = useState<string>()
+
+    const [allWaves, setAllWaves] = useState<Wave[]>([])
+    const [selectedWave, setSelectedWave] = useState(-1)
+
+    const [loading, setLoading] = useState(false)
 
     useFrame((state) => {
         const t = state.clock.getElapsedTime()
@@ -117,10 +126,92 @@ export const FloatingTV = () => {
         }
     })
 
+    const checkIfWalletIsConnected = async () => {
+        // @ts-ignore
+        const {ethereum} = window
+
+        if (!ethereum) {
+            alert("You need metamask!")
+        } else {
+            const accounts = ethereum.request({method: "eth_accounts"})
+            if (accounts.length > 0) setCurrentAccount(accounts[0])
+        }
+    }
+
+    const connectWallet = async () => {
+        // @ts-ignore
+        const {ethereum} = window
+
+        if (!ethereum) {
+            alert("You need metamask!")
+        } else {
+            const accounts = await ethereum.request({method: "eth_requestAccounts"})
+            setCurrentAccount(accounts[0])
+        }
+    }
+
+    const fetchAllWaves = async () => {
+        //@ts-ignore
+        const provider = new ethers.providers.Web3Provider(window.ethereum)
+        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
+
+        const res = await contract.getAllWaves()
+        const mapped = res.map(obj => ({
+            waver: obj.waver,
+            message: obj.message,
+            timestamp: new Date(obj.timestamp.toNumber() * 1000)
+        }))
+        setAllWaves(mapped)
+    }
+
+    const wave = async () => {
+        //@ts-ignore
+        const provider = new ethers.providers.Web3Provider(window.ethereum)
+        const signer = provider.getSigner()
+        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
+
+        const waveTx = await contract.wave(message)
+        console.log("Mining...", waveTx.hash)
+
+        await waveTx.wait()
+        console.log("Mined --", waveTx.hash)
+    }
+
+    const nextWave = async () => {
+        setSelectedWave(current => current === allWaves.length - 1 ? -1 : current + 1)
+    }
+
+    const previousWave = async () => {
+        setSelectedWave(current => current === -1 ? allWaves.length - 1 : current - 1)
+    }
+
+    useEffect(() => {
+        checkIfWalletIsConnected()
+        fetchAllWaves()
+    }, [])
+
+    const calcState = () : TVDisplayState => {
+        if (loading) {
+            return ({_type: "loading"})
+        } else if (selectedWave === -1) {
+            return ({_type: "waves"})
+        } else {
+            return ({_type: "wave", wave: allWaves[selectedWave], total: allWaves.length, selected: selectedWave})
+        }
+    }
+
+    const stateToUse = calcState()
+
     return (
-        <group position={[0,0.5,0]}>
+        <group position={[0, 0.5, 0]}>
+            <Html>
+                <button onClick={previousWave}>previous</button>
+                <button onClick={wave}>wave</button>
+                <button onClick={nextWave}>next</button>
+                <pre style={{color: "white"}}>{JSON.stringify({tvState, allWaves, selectedWave}, null, 2)}</pre>
+            </Html>
             <group ref={tvRef} position={[0, -1, -0.5]}>
-                <Tv/>
+                <Tv state={stateToUse} receiveInput={true}/>
             </group>
         </group>
     )
