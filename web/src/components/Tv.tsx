@@ -1,19 +1,22 @@
-import {FC, useEffect, useRef, useState} from "react"
-import {GroupProps, useFrame, useThree} from "@react-three/fiber"
+import {FC, useEffect, useRef} from "react"
+import {GroupProps, useThree} from "@react-three/fiber"
 import React from "react"
-import {Box, useGLTF, useTexture} from "@react-three/drei"
-import {CanvasTexture, Color, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
-import P5, {Graphics, Renderer} from "p5"
+import {useGLTF} from "@react-three/drei"
+import {CanvasTexture, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
+import P5, {Graphics} from "p5"
 
+// top-left and bottom-right corners of the screen in the albedo/diffuse texture
+// these values come from viewing the UV coordinates in blender
+export const [screenX1, screenY1] = [148, 4096 - 1159]
+export const [screenX2, screenY2] = [1403, 4096 - 211]
+export const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
 
 //@ts-ignore
 import vertUrl from "../../assets/shaders/vertex.vert?url"
 //@ts-ignore
 import fragUrl from "../../assets/shaders/frag.glsl?url"
 
-export const [screenX1, screenY1] = [148, 4096 - 1159]
-export const [screenX2, screenY2] = [1403, 4096 - 211]
-export const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
+
 export const tvScreenShader = {
     vertexUrl: vertUrl,
     fragmentUrl: fragUrl
@@ -22,12 +25,8 @@ export const tvScreenShader = {
 export type TVProps = GroupProps
 
 export const Tv: FC<TVProps> = ({position, ...props}) => {
-    const [sx, sy, sw, sh] = [150, 2930, 1250, 950]
     //@ts-ignore
-    const {nodes, materials} = useGLTF("/tv/Television_01_4k.gltf", true)
-
-    // top-left and bottom-right corners of the screen in the albedo/diffuse texture
-    // these values come from viewing the UV coordinates in blender
+    const {nodes} = useGLTF("/tv/Television_01_4k.gltf", true)
 
     const screenContentsGraphicsRef = useRef<Graphics | null>(null)
     const screenContentsTextureRef = useRef<Texture | null>(null)
@@ -58,7 +57,7 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
 
             // -- TV TEXTURE
             const finalDiffuseRenderer = p5.createGraphics(4096, 4096)
-            //@ts-ignore,  this property does exist https://p5js.org/reference/#/p5/drawingContext
+            //@ts-ignore, this property does exist https://p5js.org/reference/#/p5/drawingContext
             const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
 
             // Copy the entire original diffuse texture
@@ -98,8 +97,6 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
 
 
             // -- TEXT STYLES
-
-
             textGraphics.textSize(100)
             textGraphics.fill(255,0,0)
             textGraphics.textAlign(textGraphics.LEFT, textGraphics.TOP)
@@ -131,11 +128,13 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
             shader?.setUniform("u_resolution", [screenWidth, screenHeight])
             shader?.setUniform("u_original_screen_texture", originalScreenGraphics)
 
+            // Overlay text
+            screenContents.image(textLayer, 0, 0)
+
+            // Apply shader
             screenContents.shader(shader)
-            // screenContents.fill(255,0,0)
             screenContents.rect(0,0,screenWidth,screenHeight)
 
-            screenContents.image(textLayer, 0, 0)
 
             // COPY TO TV TEXTURE
             gl.copyTextureToTexture(
@@ -147,10 +146,7 @@ export const Tv: FC<TVProps> = ({position, ...props}) => {
     }
 
     useEffect(() => {
-        const p5 = new P5(sketch)
-
-        console.log(nodes)
-        console.log(materials)
+        new P5(sketch)
     }, [])
 
     return (
