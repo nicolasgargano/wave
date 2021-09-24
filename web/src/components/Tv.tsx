@@ -1,10 +1,9 @@
-import {FC, useEffect, useMemo, useRef} from "react"
+import {FC, useEffect, useRef} from "react"
 import {GroupProps, useThree} from "@react-three/fiber"
 import React from "react"
 import {useGLTF} from "@react-three/drei"
 import {CanvasTexture, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
 import P5, {Graphics} from "p5"
-import * as THREE from "three"
 
 // top-left and bottom-right corners of the screen in the albedo/diffuse texture
 // these values come from viewing the UV coordinates in blender
@@ -38,9 +37,21 @@ export type TVDisplayState = ADT<{
 
 export type TVProps = GroupProps & {
     state: TVDisplayState,
+    onKnobForwards?: () => void,
+    onKnobBackwards?: () => void,
+    onWaveButtonPress?: () => void,
+    onSmallButtonPress?: () => void,
 }
 
-export const Tv: FC<TVProps> = ({state, position, ...props}) => {
+export const Tv: FC<TVProps> = ({
+    state,
+    position,
+    onKnobForwards = () => {},
+    onKnobBackwards = () => {},
+    onWaveButtonPress = () => {},
+    onSmallButtonPress = () => {},
+    ...props
+}) => {
     //@ts-ignore
     const {nodes} = useGLTF(tvUrl, true)
 
@@ -161,7 +172,7 @@ export const Tv: FC<TVProps> = ({state, position, ...props}) => {
                         textLayer.text(msgBufferRef.current, padding, padding, screenWidth - padding, screenHeight - padding)
                         textLayer.textAlign(textLayer.RIGHT, textLayer.BOTTOM)
                         textLayer.text(
-                            `${(selected+1).toString().padStart(2, "0")}/${total.toString().padStart(2, "0")}`,
+                            `${(selected + 1).toString().padStart(2, "0")}/${total.toString().padStart(2, "0")}`,
                             screenWidth - padding,
                             screenHeight - padding
                         )
@@ -223,7 +234,7 @@ export const Tv: FC<TVProps> = ({state, position, ...props}) => {
                 },
                 wave: ({wave}) => {
                     msgBufferRef.current =
-                        `${wave.waver.substr(0,22)}... ${wave.timestamp.toISOString()}:
+                        `${wave.waver.substr(0, 22)}... ${wave.timestamp.toISOString()}:
 ${wave.message}`
                 }
             })
@@ -231,11 +242,7 @@ ${wave.message}`
     }, [state])
 
     return (
-        <group dispose={null} scale={4} position={position} {...props}
-            onContextMenu={(e) => {
-                e.nativeEvent.preventDefault()
-            }
-            }>
+        <group dispose={null} scale={4} position={position} {...props}>
             <mesh
                 castShadow
                 receiveShadow
@@ -249,6 +256,11 @@ ${wave.message}`
                 geometry={nodes.Knob_Top.geometry}
                 material={nodes.Knob_Top.material}
                 position={nodes.Knob_Top.position}
+                onClick={onKnobForwards}
+                onContextMenu={(e) => {
+                    e.nativeEvent.preventDefault()
+                    onKnobBackwards()
+                }}
             >
             </mesh>
             <mesh
@@ -257,6 +269,7 @@ ${wave.message}`
                 geometry={nodes.Small_Button.geometry}
                 material={nodes.Small_Button.material}
                 position={nodes.Small_Button.position}
+                onClick={onSmallButtonPress}
             >
             </mesh>
             <mesh
@@ -265,6 +278,7 @@ ${wave.message}`
                 geometry={nodes.Wave_Button_Body.geometry}
                 material={nodes.Wave_Button_Body.material}
                 position={nodes.Wave_Button_Body.position}
+                onClick={onWaveButtonPress}
             >
             </mesh>
             <mesh
