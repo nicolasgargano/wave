@@ -1,4 +1,4 @@
-import {FC, useEffect, useRef} from "react"
+import {FC, useEffect, useRef, useState} from "react"
 import {GroupProps, useThree} from "@react-three/fiber"
 import React from "react"
 import {useGLTF} from "@react-three/drei"
@@ -68,6 +68,11 @@ export const Tv: FC<TVProps> = ({
 
     const msgRef = useRef<TVDisplayState>({_type: "waves"})
     const msgBufferRef = useRef<string>("")
+
+    const [pointerOn, setPointerOn] = useState(false)
+    useEffect(() => {
+        document.body.style.cursor = pointerOn ? "pointer" : "auto"
+    }, [pointerOn])
 
     const sketch = (p5: P5) => {
         let shader: P5.Shader | undefined
@@ -261,6 +266,8 @@ ${wave.message}`
                     e.nativeEvent.preventDefault()
                     onKnobBackwards()
                 }}
+                onPointerOver={() => setPointerOn(true)}
+                onPointerOut={() => setPointerOn(false)}
             >
             </mesh>
             <mesh
@@ -270,6 +277,8 @@ ${wave.message}`
                 material={nodes.Small_Button.material}
                 position={nodes.Small_Button.position}
                 onClick={onSmallButtonPress}
+                onPointerOver={() => setPointerOn(true)}
+                onPointerOut={() => setPointerOn(false)}
             >
             </mesh>
             <mesh
@@ -279,6 +288,8 @@ ${wave.message}`
                 material={nodes.Wave_Button_Body.material}
                 position={nodes.Wave_Button_Body.position}
                 onClick={onWaveButtonPress}
+                onPointerOver={() => setPointerOn(true)}
+                onPointerOut={() => setPointerOn(false)}
             >
             </mesh>
             <mesh
