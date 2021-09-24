@@ -16,6 +16,8 @@ export const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - scre
 import vertUrl from "../../assets/shaders/vertex.vert?url"
 //@ts-ignore
 import fragUrl from "../../assets/shaders/frag.glsl?url"
+//@ts-ignore
+const tvUrl = "../../assets/tv.glb?url"
 import {ADT, match} from "ts-adt"
 import {Wave} from "../Wave"
 import {pipe} from "fp-ts/lib/function"
@@ -36,12 +38,11 @@ export type TVDisplayState = ADT<{
 
 export type TVProps = GroupProps & {
     state: TVDisplayState,
-    receiveInput: boolean,
 }
 
-export const Tv: FC<TVProps> = ({state, receiveInput, position, ...props}) => {
+export const Tv: FC<TVProps> = ({state, position, ...props}) => {
     //@ts-ignore
-    const {nodes} = useGLTF("/tv/Television_01_4k.gltf", true)
+    const {nodes} = useGLTF(tvUrl, true)
 
     const screenContentsGraphicsRef = useRef<Graphics | null>(null)
     const screenContentsTextureRef = useRef<Texture | null>(null)
@@ -77,7 +78,7 @@ export const Tv: FC<TVProps> = ({state, receiveInput, position, ...props}) => {
             const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
 
             // Copy the entire original diffuse texture
-            const material = nodes.Television_01.material as MeshStandardMaterial
+            const material = nodes.Body.material as MeshStandardMaterial
             const diffuseMap = material.map?.image
             ctx.drawImage(diffuseMap, 0, 0)
             ctx.rotate(Math.PI)
@@ -230,16 +231,52 @@ ${wave.message}`
     }, [state])
 
     return (
-        <group dispose={null} scale={4} position={position} {...props}>
+        <group dispose={null} scale={4} position={position} {...props}
+            onContextMenu={(e) => {
+                e.nativeEvent.preventDefault()
+            }
+            }>
             <mesh
                 castShadow
                 receiveShadow
-                geometry={nodes.Television_01.geometry}
-                material={nodes.Television_01.material}
+                geometry={nodes.Body.geometry}
+                material={nodes.Body.material}
+            >
+            </mesh>
+            <mesh
+                castShadow
+                receiveShadow
+                geometry={nodes.Knob_Top.geometry}
+                material={nodes.Knob_Top.material}
+                position={nodes.Knob_Top.position}
+            >
+            </mesh>
+            <mesh
+                castShadow
+                receiveShadow
+                geometry={nodes.Small_Button.geometry}
+                material={nodes.Small_Button.material}
+                position={nodes.Small_Button.position}
+            >
+            </mesh>
+            <mesh
+                castShadow
+                receiveShadow
+                geometry={nodes.Wave_Button_Body.geometry}
+                material={nodes.Wave_Button_Body.material}
+                position={nodes.Wave_Button_Body.position}
+            >
+            </mesh>
+            <mesh
+                castShadow
+                receiveShadow
+                geometry={nodes.Wave_Button_Rim.geometry}
+                material={nodes.Wave_Button_Rim.material}
+                position={nodes.Wave_Button_Rim.position}
             >
             </mesh>
         </group>
     )
 }
 
-useGLTF.preload("/tv/Television_01_4k.gltf")
+useGLTF.preload(tvUrl)
