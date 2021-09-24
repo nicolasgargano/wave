@@ -1,8 +1,8 @@
 import * as THREE from "three"
 import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
-import {Canvas, useFrame, useThree} from "@react-three/fiber"
-import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
-import {Color, Mesh, Vector2, Vector3} from "three"
+import {Canvas, useFrame} from "@react-three/fiber"
+import {Reflector, useTexture, OrbitControls, Box, Stats} from "@react-three/drei"
+import {Vector2, Vector3} from "three"
 //@ts-ignore
 import {BlendFunction} from "postprocessing"
 import {WaveText} from "./components/WaveText"
@@ -74,7 +74,7 @@ export const Scene = () => {
     const [clicked, setClicked] = useState(true)
     const [ready, setReady] = useState(false)
     const store = {clicked, setClicked, ready, setReady}
-    const debug = true
+    const debug = false
     const lookAt = useMemo(() => new Vector3(0, 0, 0), [])
 
     return (
@@ -204,14 +204,21 @@ export const FloatingTV = () => {
 
     return (
         <group position={[0, 0.5, 0]}>
-            <Html>
-                <button onClick={previousWave}>previous</button>
-                <button onClick={wave}>wave</button>
-                <button onClick={nextWave}>next</button>
-                <pre style={{color: "white"}}>{JSON.stringify({tvState, allWaves, selectedWave}, null, 2)}</pre>
-            </Html>
+            {/*<Html>*/}
+            {/*    <pre style={{color: "white"}}>{JSON.stringify({tvState, allWaves, selectedWave}, null, 2)}</pre>*/}
+            {/*    <button onClick={previousWave}>previous</button>*/}
+            {/*    <button onClick={wave}>wave</button>*/}
+            {/*    <button onClick={nextWave}>next</button>*/}
+            {/*    <textarea></textarea>*/}
+            {/*</Html>*/}
             <group ref={tvRef} position={[0, -1, -0.5]}>
-                <Tv state={stateToUse} receiveInput={true}/>
+                <Tv
+                    state={stateToUse}
+                    onKnobForwards={nextWave}
+                    onKnobBackwards={previousWave}
+                    onSmallButtonPress={() => {console.log("Small Button Press")}}
+                    onWaveButtonPress={wave}
+                />
             </group>
         </group>
     )
