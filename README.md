@@ -4,7 +4,9 @@ Say hi.
 
 ### Credits
 
-[TV model](https://polyhaven.com/a/Television_01) by Gabriel Radić
+I made the tv in blender from these two:
+- [TV model](https://polyhaven.com/a/Television_01) by Gabriel Radić
+- [Button](https://sketchfab.com/3d-models/the-doomsday-remote-control-226bfc151fb84cf8996d9fa25066489f) by Santiago Shang
 
 Scene setup from https://codesandbox.io/s/ground-reflections-and-video-textures-bfplr
 
