@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
 import {Canvas, useFrame} from "@react-three/fiber"
-import {Reflector, useTexture, OrbitControls, Box, Stats} from "@react-three/drei"
+import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
 import {Vector2, Vector3} from "three"
 //@ts-ignore
 import {BlendFunction} from "postprocessing"
@@ -102,9 +102,11 @@ export const Scene = () => {
 
 export const FloatingTV = () => {
     const tvRef = useRef()
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
     const [tvState, setTvState] = useState<TVDisplayState>({_type: "waves"})
 
-    const [message, setMessage] = useState<string>("")
+    const [message, setMessage] = useState<string | undefined>(undefined)
     const [currentAccount, setCurrentAccount] = useState<string>()
 
     const [allWaves, setAllWaves] = useState<Wave[]>([])
@@ -123,6 +125,11 @@ export const FloatingTV = () => {
             tvRef.current.rotation.z = THREE.MathUtils.lerp(tvRef.current.rotation.z, Math.sin(t / 4) / 20, 0.1)
             //@ts-ignore
             tvRef.current.position.y = THREE.MathUtils.lerp(tvRef.current.position.y, (-5 + Math.sin(t)) / 5, 0.1)
+        }
+
+        if (textareaRef.current) {
+            if (message !== undefined && document.activeElement?.id !== "tv-textarea-input")
+                textareaRef.current?.focus()
         }
     })
 
@@ -165,23 +172,30 @@ export const FloatingTV = () => {
     }
 
     const wave = async () => {
-        //@ts-ignore
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
-        const signer = provider.getSigner()
-        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
+        if (message) {
+            //@ts-ignore
+            const provider = new ethers.providers.Web3Provider(window.ethereum)
+            const signer = provider.getSigner()
+            const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-        const waveTx = await contract.wave(message)
-        console.log("Mining...", waveTx.hash)
+            const waveTx = await contract.wave(message)
+            console.log("Mining...", waveTx.hash)
 
-        await waveTx.wait()
-        console.log("Mined --", waveTx.hash)
+            await waveTx.wait()
+            console.log("Mined --", waveTx.hash)
+        } else {
+            setMessage("")
+            setSelectedWave(-1)
+        }
     }
 
     const nextWave = async () => {
+        setMessage(undefined)
         setSelectedWave(current => current === allWaves.length - 1 ? -1 : current + 1)
     }
 
     const previousWave = async () => {
+        setMessage(undefined)
         setSelectedWave(current => current === -1 ? allWaves.length - 1 : current - 1)
     }
 
@@ -190,8 +204,10 @@ export const FloatingTV = () => {
         fetchAllWaves()
     }, [])
 
-    const calcState = () : TVDisplayState => {
-        if (loading) {
+    const calcState = (): TVDisplayState => {
+        if (message !== undefined) {
+            return ({_type: "text", text: message, showCursor: true})
+        } else if (loading) {
             return ({_type: "loading"})
         } else if (selectedWave === -1) {
             return ({_type: "waves"})
@@ -209,14 +225,31 @@ export const FloatingTV = () => {
             {/*    <button onClick={previousWave}>previous</button>*/}
             {/*    <button onClick={wave}>wave</button>*/}
             {/*    <button onClick={nextWave}>next</button>*/}
-            {/*    <textarea></textarea>*/}
             {/*</Html>*/}
+            <Html>
+                {/* I need a textarea to handle the inputs because it's the best way I found.
+                    I considered handling keydowns but it gets wonky with special keys.
+                    I only need the input, the text is displayed in the screen, so I want to hide the element.
+                    It turns out that you can't use a hidden textarea so this div does the trick.
+                    Then in useFrame I make sure the textarea is focused while the tv is in write mode.
+                 */}
+                <div style={{width: 0, overflow: "hidden"}}>
+                    <textarea
+                        ref={textareaRef}
+                        id={"tv-textarea-input"}
+                        value={message}
+                        onChange={(ev) => setMessage(ev.target.value)}
+                    />
+                </div>
+            </Html>
             <group ref={tvRef} position={[0, -1, -0.5]}>
                 <Tv
                     state={stateToUse}
                     onKnobForwards={nextWave}
                     onKnobBackwards={previousWave}
-                    onSmallButtonPress={() => {console.log("Small Button Press")}}
+                    onSmallButtonPress={() => {
+                        console.log("Small Button Press")
+                    }}
                     onWaveButtonPress={wave}
                 />
             </group>
