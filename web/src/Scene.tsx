@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import * as dom from "react-dom"
 import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
 import {Canvas, useFrame} from "@react-three/fiber"
 import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
@@ -11,10 +12,11 @@ import {useCanvasTexture} from "./hooks/useCanvasTexture"
 import {Wave} from "./Wave"
 import {ethers} from "ethers"
 import {WavePortal__factory} from "../../typechain"
-
+import surfaceImperfections from "../assets/SurfaceImperfections003_1K_var1.jpg"
+import surfaceImperfectionsNormals from "../assets/SurfaceImperfections003_1K_Normal.jpg"
 
 const Ground = () => {
-    const [floor, normal] = useTexture(["/SurfaceImperfections003_1K_var1.jpg", "/SurfaceImperfections003_1K_Normal.jpg"])
+    const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
     const normalScale = useMemo(() => new Vector2(1, 1), [])
     return (
         <Reflector resolution={512} args={[10, 10]} mirror={0.4} mixBlur={8} mixStrength={1}

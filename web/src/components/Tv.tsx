@@ -11,12 +11,11 @@ export const [screenX1, screenY1] = [148, 4096 - 1159]
 export const [screenX2, screenY2] = [1403, 4096 - 211]
 export const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
 
-//@ts-ignore
-import vertUrl from "../../assets/shaders/vertex.vert?url"
-//@ts-ignore
-import fragUrl from "../../assets/shaders/frag.glsl?url"
-//@ts-ignore
-const tvUrl = "../../assets/tv.glb?url"
+const vertUrl = "/shaders/vertex.vert"
+const fragUrl = "/shaders/frag.glsl"
+const tvUrl = "/tv.glb"
+import tvFontUrl from "../../assets/VT323-Regular.ttf"
+
 import {ADT, match} from "ts-adt"
 import {Wave} from "../Wave"
 import {pipe} from "fp-ts/lib/function"
@@ -80,7 +79,7 @@ export const Tv: FC<TVProps> = ({
 
         p5.preload = () => {
             shader = p5.loadShader(tvScreenShader.vertexUrl, tvScreenShader.fragmentUrl)
-            font = p5.loadFont("/VT323-Regular.ttf")
+            font = p5.loadFont(tvFontUrl)
         }
 
         p5.setup = () => {
