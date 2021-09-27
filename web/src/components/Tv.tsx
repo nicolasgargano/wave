@@ -226,7 +226,11 @@ export const Tv: FC<TVProps> = ({
             match({
                 text: ({text, showCursor}) => {
                     if (showCursor) {
-                        msgBufferRef.current = new Array(text.length).fill(" ").join("") + "["
+                        // replace any of the non space glyphs in the font for non breaking spaces
+                        const t = text.replaceAll(/\S/g, " ")
+                        msgBufferRef.current = t + "["
+                    } else {
+                        msgBufferRef.current = ""
                     }
                 },
                 waves: () => {
