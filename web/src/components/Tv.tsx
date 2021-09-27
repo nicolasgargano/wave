@@ -1,8 +1,8 @@
-import {FC, useEffect, useRef, useState} from "react"
+import {FC, useEffect, useMemo, useRef, useState} from "react"
 import {GroupProps, useThree} from "@react-three/fiber"
 import React from "react"
 import {useGLTF} from "@react-three/drei"
-import {CanvasTexture, MeshStandardMaterial, sRGBEncoding, Texture, Vector2} from "three"
+import {CanvasTexture, MeshStandardMaterial, sRGBEncoding, Texture, Vector2, Vector3} from "three"
 import P5, {Graphics} from "p5"
 
 // top-left and bottom-right corners of the screen in the albedo/diffuse texture
@@ -36,6 +36,7 @@ export type TVDisplayState = ADT<{
 export type TVProps = GroupProps & {
     state: TVDisplayState,
     knobRotationRad: number,
+    buttonDepthNormalized: number,
     onKnobForwards?: () => void,
     onKnobBackwards?: () => void,
     onWaveButtonPress?: () => void,
@@ -46,6 +47,7 @@ export const Tv: FC<TVProps> = ({
     state,
     position,
     knobRotationRad,
+    buttonDepthNormalized,
     onKnobForwards = () => {},
     onKnobBackwards = () => {},
     onWaveButtonPress = () => {},
@@ -78,6 +80,16 @@ export const Tv: FC<TVProps> = ({
     useEffect(() => {
         document.body.style.cursor = pointerOn ? "pointer" : "auto"
     }, [pointerOn])
+
+
+
+
+    const buttonPosition = useMemo(() => {
+        // released: -0.190326
+        // pressed:  -0.175711
+        const posFromModel = nodes.Wave_Button_Body.position as Vector3
+        return new Vector3(posFromModel.x, posFromModel.y, 0.175711).lerp(posFromModel, buttonDepthNormalized)
+    }, [buttonDepthNormalized])
 
     const sketch = (p5: P5) => {
         let shader: P5.Shader | undefined
@@ -221,6 +233,7 @@ export const Tv: FC<TVProps> = ({
     }
 
     useEffect(() => {
+        console.log(nodes)
         new P5(sketch)
     }, [])
 
@@ -292,7 +305,7 @@ ${wave.message}`
                 receiveShadow
                 geometry={nodes.Wave_Button_Body.geometry}
                 material={nodes.Wave_Button_Body.material}
-                position={nodes.Wave_Button_Body.position}
+                position={buttonPosition}
                 onClick={onWaveButtonPress}
                 onPointerOver={() => setPointerOn(true)}
                 onPointerOut={() => setPointerOn(false)}

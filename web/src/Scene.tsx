@@ -106,6 +106,7 @@ export const Scene = () => {
 
 type TVState = ADT<{
     loading: {},
+    waitingUserAction: { msg: string },
     error: { msg: string },
     writing: { msg: string },
     viewing: { index: number },
@@ -196,14 +197,15 @@ export const FloatingTV = () => {
 
     const wave = async () => {
         if (tvState._type === "writing") {
-            await getWallet()
-
-            //@ts-ignore
-            const provider = new ethers.providers.Web3Provider(window.ethereum)
-            const signer = provider.getSigner()
-            const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
-
             try {
+                setTvState({_type: "waitingUserAction", msg: "Check your wallet"})
+                await getWallet()
+
+                //@ts-ignore
+                const provider = new ethers.providers.Web3Provider(window.ethereum)
+                const signer = provider.getSigner()
+                const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
+
                 const waveTx = await contract.wave(tvState.msg)
 
                 console.log("Mining...", waveTx.hash)
@@ -217,6 +219,7 @@ export const FloatingTV = () => {
 
                 setTvState({_type: "waves"})
             } catch (e) {
+                console.error(e)
                 setTvState({_type: "error", msg: `Error:${JSON.stringify(e)}`})
             }
         } else {
@@ -234,7 +237,8 @@ export const FloatingTV = () => {
                 waves: () => ({_type: "viewing", index: 0}),
                 writing: () => ({_type: "waves"}),
                 error: () => ({_type: "waves"}),
-                loading: () => ({_type: "waves"})
+                loading: () => ({_type: "waves"}),
+                waitingUserAction: () => ({_type: "waves"}),
             }),
             state => state as TVState
         ))
@@ -255,7 +259,8 @@ export const FloatingTV = () => {
                 waves: () => ({_type: "viewing", index: 0}),
                 writing: () => ({_type: "waves"}),
                 error: () => ({_type: "waves"}),
-                loading: () => ({_type: "waves"})
+                loading: () => ({_type: "waves"}),
+                waitingUserAction: () => ({_type: "waves"}),
             }),
             state => state as TVState
         ))
@@ -283,6 +288,7 @@ export const FloatingTV = () => {
         pipe(
             tvState,
             match({
+                waitingUserAction: ({msg}) => ({_type: "topLeft", text: msg}) as TVDisplayState,
                 loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
                 error: ({msg}) => ({_type: "topLeft", text: msg, showCursor: false}) as TVDisplayState,
                 writing: ({msg}) => ({_type: "topLeft", text: msg, showCursor: true}) as TVDisplayState,
@@ -297,6 +303,18 @@ export const FloatingTV = () => {
         )
 
     const stateToUse = calcState()
+
+    const buttonDepth = pipe(
+        tvState,
+        match({
+            waitingUserAction: () => 0,
+            loading: () => 0,
+            error: () => 1,
+            writing: () => 0.5,
+            waves: () => 1,
+            viewing: () => 1,
+        })
+    )
 
     return (
         <group position={[0, 0.5, 0]}>
@@ -324,6 +342,7 @@ export const FloatingTV = () => {
                 <Tv
                     state={stateToUse}
                     knobRotationRad={knobRotations[knobPositionIndex]}
+                    buttonDepthNormalized={buttonDepth}
                     onKnobForwards={nextWave}
                     onKnobBackwards={previousWave}
                     onSmallButtonPress={() => {
