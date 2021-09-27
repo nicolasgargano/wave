@@ -74,7 +74,7 @@ export const Wave = () => {
         const signer = provider.getSigner()
         const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-        const waveTx = await contract.wave(message)
+        const waveTx = await contract.wave(message, {gasLimit: 250_000, gasPrice: 2})
         console.log("Mining...", waveTx.hash)
 
         await waveTx.wait()

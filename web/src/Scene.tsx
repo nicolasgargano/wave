@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import * as dom from "react-dom"
-import React, {FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
+import React, {ChangeEvent, ChangeEventHandler, FC, Suspense, useEffect, useMemo, useRef, useState} from "react"
 import {Canvas, useFrame} from "@react-three/fiber"
 import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
 import {Vector2, Vector3} from "three"
@@ -14,6 +14,8 @@ import {ethers} from "ethers"
 import {WavePortal__factory} from "../../typechain"
 import surfaceImperfections from "../assets/SurfaceImperfections003_1K_var1.jpg"
 import surfaceImperfectionsNormals from "../assets/SurfaceImperfections003_1K_Normal.jpg"
+import {ADT, match, matchPI} from "ts-adt"
+import {pipe} from "fp-ts/es6/function"
 
 const Ground = () => {
     const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
@@ -102,19 +104,22 @@ export const Scene = () => {
     )
 }
 
+type TVState = ADT<{
+    loading: {},
+    error: { msg: string },
+    writing: { msg: string },
+    viewing: { index: number },
+    waves: {}
+}>
+
+const wavesText: string = new Array(25).fill("wave").join(" ")
+
 export const FloatingTV = () => {
     const tvRef = useRef()
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-    const [tvState, setTvState] = useState<TVDisplayState>({_type: "waves"})
-
-    const [message, setMessage] = useState<string | undefined>(undefined)
-    const [currentAccount, setCurrentAccount] = useState<string>()
-
+    const [tvState, setTvState] = useState<TVState>({_type: "waves"})
     const [allWaves, setAllWaves] = useState<Wave[]>([])
-    const [selectedWave, setSelectedWave] = useState(-1)
-
-    const [loading, setLoading] = useState(false)
 
     useFrame((state) => {
         const t = state.clock.getElapsedTime()
@@ -130,12 +135,12 @@ export const FloatingTV = () => {
         }
 
         if (textareaRef.current) {
-            if (message !== undefined && document.activeElement?.id !== "tv-textarea-input")
-                textareaRef.current?.focus()
+            if (tvState._type === "writing" && document.activeElement?.id !== "tv-textarea-input")
+                textareaRef.current.focus()
         }
     })
 
-    const checkIfWalletIsConnected = async () => {
+    const getWallet = async () => {
         // @ts-ignore
         const {ethereum} = window
 
@@ -143,107 +148,152 @@ export const FloatingTV = () => {
             alert("You need metamask!")
         } else {
             const accounts = ethereum.request({method: "eth_accounts"})
-            if (accounts.length > 0) setCurrentAccount(accounts[0])
+            if (accounts.length > 0) {
+                return accounts[0]
+            } else {
+                const accounts = await ethereum.request({method: "eth_requestAccounts"})
+                return accounts[0]
+            }
         }
     }
 
-    const connectWallet = async () => {
+    const fetchAllWaves = async () => {
         // @ts-ignore
         const {ethereum} = window
 
         if (!ethereum) {
             alert("You need metamask!")
         } else {
-            const accounts = await ethereum.request({method: "eth_requestAccounts"})
-            setCurrentAccount(accounts[0])
+            //@ts-ignore
+            const provider = new ethers.providers.Web3Provider(ethereum)
+            const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
+
+            const res = await contract.getAllWaves()
+            const mapped = res.map(obj => ({
+                waver: obj.waver,
+                message: obj.message,
+                timestamp: new Date(obj.timestamp.toNumber() * 1000)
+            }))
+            setAllWaves(mapped)
         }
     }
 
-    const fetchAllWaves = async () => {
-        //@ts-ignore
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
-        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
-
-        const res = await contract.getAllWaves()
-        const mapped = res.map(obj => ({
-            waver: obj.waver,
-            message: obj.message,
-            timestamp: new Date(obj.timestamp.toNumber() * 1000)
-        }))
-        setAllWaves(mapped)
-    }
-
     const wave = async () => {
-        if (message) {
+        if (tvState._type === "writing") {
+            await getWallet()
+
             //@ts-ignore
             const provider = new ethers.providers.Web3Provider(window.ethereum)
             const signer = provider.getSigner()
             const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-            const waveTx = await contract.wave(message)
-            console.log("Mining...", waveTx.hash)
+            try {
+                const waveTx = await contract.wave(tvState.msg)
 
-            await waveTx.wait()
-            console.log("Mined --", waveTx.hash)
+                console.log("Mining...", waveTx.hash)
+                setTvState({_type: "loading"})
+
+                await waveTx.wait()
+
+                console.log("Mined --", waveTx.hash)
+
+                await fetchAllWaves()
+
+                setTvState({_type: "waves"})
+            } catch (e) {
+                setTvState({_type: "error", msg: `Error:${JSON.stringify(e)}`})
+            }
         } else {
-            setMessage("")
-            setSelectedWave(-1)
+            setTvState({_type: "writing", msg: ""})
         }
     }
 
     const nextWave = async () => {
-        setMessage(undefined)
-        setSelectedWave(current => current === allWaves.length - 1 ? -1 : current + 1)
+        setTvState(currentTvState => pipe(
+            currentTvState,
+            match({
+                viewing: ({index}) => index === allWaves.length - 1
+                    ? ({_type: "waves"})
+                    : ({_type: "viewing", index: index + 1}),
+                waves: () => ({_type: "viewing", index: 0}),
+                writing: () => ({_type: "waves"}),
+                error: () => ({_type: "waves"}),
+                loading: () => ({_type: "waves"})
+            }),
+            state => state as TVState
+        ))
     }
 
     const previousWave = async () => {
-        setMessage(undefined)
-        setSelectedWave(current => current === -1 ? allWaves.length - 1 : current - 1)
+        setTvState(currentTvState => pipe(
+            currentTvState,
+            match({
+                viewing: ({index}) => index === 0
+                    ? ({_type: "waves"})
+                    : ({_type: "viewing", index: index - 1}),
+                waves: () => ({_type: "viewing", index: 0}),
+                writing: () => ({_type: "waves"}),
+                error: () => ({_type: "waves"}),
+                loading: () => ({_type: "waves"})
+            }),
+            state => state as TVState
+        ))
+    }
+
+    const onTextAreaInput = (ev: ChangeEvent<HTMLTextAreaElement>) => {
+        console.log("ontextareainput", ev.target.value)
+        setTvState(
+            tvState._type === "writing"
+                ? ({_type: "writing", msg: ev.target.value})
+                : tvState
+        )
     }
 
     useEffect(() => {
-        checkIfWalletIsConnected()
         fetchAllWaves()
     }, [])
 
-    const calcState = (): TVDisplayState => {
-        if (message !== undefined) {
-            return ({_type: "text", text: message, showCursor: true})
-        } else if (loading) {
-            return ({_type: "loading"})
-        } else if (selectedWave === -1) {
-            return ({_type: "waves"})
-        } else {
-            return ({_type: "wave", wave: allWaves[selectedWave], total: allWaves.length, selected: selectedWave})
-        }
-    }
+    const calcState = (): TVDisplayState =>
+        pipe(
+            tvState,
+            match({
+                loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
+                error: ({msg}) => ({_type: "topLeft", text: msg, showCursor: false}) as TVDisplayState,
+                writing: ({msg}) => ({_type: "topLeft", text: msg, showCursor: true}) as TVDisplayState,
+                waves: () => ({_type: "topLeft", text: wavesText}) as TVDisplayState,
+                viewing: ({index}) => ({
+                    _type: "wave",
+                    wave: allWaves[index],
+                    total: allWaves.length,
+                    selected: index
+                }) as TVDisplayState,
+            })
+        )
 
     const stateToUse = calcState()
 
     return (
         <group position={[0, 0.5, 0]}>
-            {/*<Html>*/}
-            {/*    <pre style={{color: "white"}}>{JSON.stringify({tvState, allWaves, selectedWave}, null, 2)}</pre>*/}
-            {/*    <button onClick={previousWave}>previous</button>*/}
-            {/*    <button onClick={wave}>wave</button>*/}
-            {/*    <button onClick={nextWave}>next</button>*/}
-            {/*</Html>*/}
-            <Html>
-                {/* I need a textarea to handle the inputs because it's the best way I found.
+            {
+                tvState._type === "writing" &&
+                <Html>
+                    {/* I need a textarea to handle the inputs because it's the best way I found.
                     I considered handling keydowns but it gets wonky with special keys.
                     I only need the input, the text is displayed in the screen, so I want to hide the element.
                     It turns out that you can't use a hidden textarea so this div does the trick.
                     Then in useFrame I make sure the textarea is focused while the tv is in write mode.
                  */}
-                <div style={{width: 0, overflow: "hidden"}}>
-                    <textarea
-                        ref={textareaRef}
-                        id={"tv-textarea-input"}
-                        value={message}
-                        onChange={(ev) => setMessage(ev.target.value)}
-                    />
-                </div>
-            </Html>
+                    <div style={{width: 0, overflow: "hidden"}}>
+                        <textarea
+                            ref={textareaRef}
+                            id={"tv-textarea-input"}
+                            value={tvState.msg}
+                            onChange={onTextAreaInput}
+                        />
+                    </div>
+                </Html>
+            }
+
             <group ref={tvRef} position={[0, -1, -0.5]}>
                 <Tv
                     state={stateToUse}

@@ -27,11 +27,10 @@ export const tvScreenShader = {
 }
 
 export type TVDisplayState = ADT<{
-    loading: {}
-    waves: {}
     screenSaver: {}
-    wave: { wave: Wave, total: number, selected: number },
-    text: { text: string, showCursor: boolean }
+    centered: { text: string }
+    wave: { wave: Wave, total: number, selected: number }
+    topLeft: { text: string, showCursor: boolean }
 }>
 
 export type TVProps = GroupProps & {
@@ -65,7 +64,12 @@ export const Tv: FC<TVProps> = ({
 
     const gl = useThree(three => three.gl)
 
-    const msgRef = useRef<TVDisplayState>({_type: "waves"})
+    const msgRef = useRef<TVDisplayState>({
+        _type: "topLeft",
+        text: new Array(25).fill("waves").join(" "),
+        showCursor: false
+    })
+
     const msgBufferRef = useRef<string>("")
 
     const [pointerOn, setPointerOn] = useState(false)
@@ -153,7 +157,7 @@ export const Tv: FC<TVProps> = ({
             pipe(
                 msgRef.current,
                 match({
-                    text: ({text, showCursor}) => {
+                    topLeft: ({text, showCursor}) => {
                         textLayer.text(text, padding, padding, screenWidth - padding, screenHeight - padding)
                         if (showCursor) {
                             // const fill = THREE.MathUtils.mapLinear(Math.sin(time*5), -1, 1, 30, 255)
@@ -163,11 +167,10 @@ export const Tv: FC<TVProps> = ({
                             textLayer.fill(255, 0, 255)
                         }
                     },
-                    waves: () => {
-                        textLayer.text(msgBufferRef.current, padding, padding, screenWidth - padding, screenHeight - padding)
-                    },
-                    loading: () => {
-                        textLayer.text("loading...", padding, padding, screenWidth - padding, screenHeight - padding)
+                    centered: ({text}) => {
+                        textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
+                        textLayer.text(text, padding, padding, screenWidth - padding, screenHeight - padding)
+                        textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
                     },
                     screenSaver: () => {
                         textLayer.text("screensaver", padding, padding, screenWidth - padding, screenHeight - padding)
@@ -224,7 +227,7 @@ export const Tv: FC<TVProps> = ({
         pipe(
             msgRef.current,
             match({
-                text: ({text, showCursor}) => {
+                topLeft: ({text, showCursor}) => {
                     if (showCursor) {
                         // replace any of the non space glyphs in the font for non breaking spaces
                         const t = text.replaceAll(/\S/g, " ")
@@ -233,10 +236,7 @@ export const Tv: FC<TVProps> = ({
                         msgBufferRef.current = ""
                     }
                 },
-                waves: () => {
-                    msgBufferRef.current = new Array(25).fill("wave").join(" ")
-                },
-                loading: () => {
+                centered: () => {
                 },
                 screenSaver: () => {
                 },
