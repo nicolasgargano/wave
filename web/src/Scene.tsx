@@ -114,12 +114,28 @@ type TVState = ADT<{
 
 const wavesText: string = new Array(25).fill("wave").join(" ")
 
+const knobRotations = [
+    -30,
+    0,
+    35,
+    73,
+    107,
+    143,
+    176,
+    212,
+    246,
+    285
+].map(rot => -THREE.MathUtils.degToRad(rot))
+
 export const FloatingTV = () => {
     const tvRef = useRef()
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
     const [tvState, setTvState] = useState<TVState>({_type: "waves"})
     const [allWaves, setAllWaves] = useState<Wave[]>([])
+
+
+    const [knobPositionIndex, setKnobPositionIndex] = useState(1)
 
     useFrame((state) => {
         const t = state.clock.getElapsedTime()
@@ -222,6 +238,11 @@ export const FloatingTV = () => {
             }),
             state => state as TVState
         ))
+        setKnobPositionIndex(curr =>
+            curr === knobRotations.length - 1
+                ? 0
+                : curr + 1
+        )
     }
 
     const previousWave = async () => {
@@ -238,6 +259,11 @@ export const FloatingTV = () => {
             }),
             state => state as TVState
         ))
+        setKnobPositionIndex(curr =>
+            curr === 0
+                ? knobRotations.length - 1
+                : curr -1
+        )
     }
 
     const onTextAreaInput = (ev: ChangeEvent<HTMLTextAreaElement>) => {
@@ -297,6 +323,7 @@ export const FloatingTV = () => {
             <group ref={tvRef} position={[0, -1, -0.5]}>
                 <Tv
                     state={stateToUse}
+                    knobRotationRad={knobRotations[knobPositionIndex]}
                     onKnobForwards={nextWave}
                     onKnobBackwards={previousWave}
                     onSmallButtonPress={() => {

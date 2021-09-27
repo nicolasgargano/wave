@@ -35,6 +35,7 @@ export type TVDisplayState = ADT<{
 
 export type TVProps = GroupProps & {
     state: TVDisplayState,
+    knobRotationRad: number,
     onKnobForwards?: () => void,
     onKnobBackwards?: () => void,
     onWaveButtonPress?: () => void,
@@ -44,6 +45,7 @@ export type TVProps = GroupProps & {
 export const Tv: FC<TVProps> = ({
     state,
     position,
+    knobRotationRad,
     onKnobForwards = () => {},
     onKnobBackwards = () => {},
     onWaveButtonPress = () => {},
@@ -264,6 +266,7 @@ ${wave.message}`
                 geometry={nodes.Knob_Top.geometry}
                 material={nodes.Knob_Top.material}
                 position={nodes.Knob_Top.position}
+                rotation={[0, 0, knobRotationRad]}
                 onClick={onKnobForwards}
                 onContextMenu={(e) => {
                     e.nativeEvent.preventDefault()
