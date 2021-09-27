@@ -206,7 +206,7 @@ export const FloatingTV = () => {
                 const signer = provider.getSigner()
                 const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-                const waveTx = await contract.wave(tvState.msg)
+                const waveTx = await contract.wave(tvState.msg, {gasLimit: 250_000})
 
                 console.log("Mining...", waveTx.hash)
                 setTvState({_type: "loading"})
