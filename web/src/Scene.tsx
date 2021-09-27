@@ -16,6 +16,7 @@ import surfaceImperfections from "../assets/SurfaceImperfections003_1K_var1.jpg"
 import surfaceImperfectionsNormals from "../assets/SurfaceImperfections003_1K_Normal.jpg"
 import {ADT, match, matchPI} from "ts-adt"
 import {pipe} from "fp-ts/es6/function"
+import {Overlay} from "./components/Overlay"
 
 const Ground = () => {
     const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
@@ -100,6 +101,7 @@ export const Scene = () => {
                 {debug && <OrbitControls/>}
                 {debug && <Stats/>}
             </Canvas>
+            <Overlay/>
         </>
     )
 }
