@@ -19,6 +19,7 @@ import tvFontUrl from "../../assets/VT323-Regular.ttf"
 import {ADT, match} from "ts-adt"
 import {Wave} from "../Wave"
 import {pipe} from "fp-ts/lib/function"
+import {useOutlinedObjects} from "../hooks/useOutlinedObjects"
 
 
 export const tvScreenShader = {
@@ -39,7 +40,11 @@ export type TVProps = GroupProps & {
     buttonDepthNormalized: number,
     onKnobForwards?: () => void,
     onKnobBackwards?: () => void,
+    onKnobPointerOver?: () => void,
+    onKnobPointerOut?: () => void,
     onWaveButtonPress?: () => void,
+    onWaveButtonPointerOver?: () => void
+    onWaveButtonPointerOut?: () => void
     onSmallButtonPress?: () => void,
 }
 
@@ -50,7 +55,11 @@ export const Tv: FC<TVProps> = ({
     buttonDepthNormalized,
     onKnobForwards = () => {},
     onKnobBackwards = () => {},
+    onKnobPointerOver = () => {},
+    onKnobPointerOut = () => {},
     onWaveButtonPress = () => {},
+    onWaveButtonPointerOver = () => {},
+    onWaveButtonPointerOut = () => {},
     onSmallButtonPress = () => {},
     ...props
 }) => {
@@ -81,8 +90,8 @@ export const Tv: FC<TVProps> = ({
         document.body.style.cursor = pointerOn ? "pointer" : "auto"
     }, [pointerOn])
 
-
-
+    const knobOutline = useOutlinedObjects()
+    const waveButtonOutline = useOutlinedObjects()
 
     const buttonPosition = useMemo(() => {
         // released: -0.190326
@@ -280,13 +289,57 @@ ${wave.message}`
                 material={nodes.Knob_Top.material}
                 position={nodes.Knob_Top.position}
                 rotation={[0, 0, knobRotationRad]}
-                onClick={onKnobForwards}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onKnobForwards()
+                }}
                 onContextMenu={(e) => {
+                    e.nativeEvent.preventDefault()
+                    e.stopPropagation()
+                    onKnobBackwards()
+                }}
+                onPointerOver={(e) => {
+                    e.stopPropagation()
+                    setPointerOn(true)
+                    onKnobPointerOver()
+                    knobOutline.onPointerOver()
+                }}
+                onPointerOut={(e) => {
+                    e.stopPropagation()
+                    setPointerOn(false)
+                    onKnobPointerOut()
+                    knobOutline.onPointerOut()
+                }}
+            >
+            </mesh>
+            <mesh
+                castShadow
+                receiveShadow
+                ref={knobOutline.ref}
+                geometry={nodes.Knob_Top_Rim.geometry}
+                material={nodes.Knob_Top_Rim.material}
+                position={nodes.Knob_Top_Rim.position}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onKnobForwards()
+                }}
+                onContextMenu={(e) => {
+                    e.stopPropagation()
                     e.nativeEvent.preventDefault()
                     onKnobBackwards()
                 }}
-                onPointerOver={() => setPointerOn(true)}
-                onPointerOut={() => setPointerOn(false)}
+                onPointerOver={(e) => {
+                    e.stopPropagation()
+                    setPointerOn(true)
+                    onKnobPointerOver()
+                    knobOutline.onPointerOver()
+                }}
+                onPointerOut={(e) => {
+                    e.stopPropagation()
+                    setPointerOn(false)
+                    onKnobPointerOut()
+                    knobOutline.onPointerOut()
+                }}
             >
             </mesh>
             <mesh
@@ -303,12 +356,21 @@ ${wave.message}`
             <mesh
                 castShadow
                 receiveShadow
+                ref={waveButtonOutline.ref}
                 geometry={nodes.Wave_Button_Body.geometry}
                 material={nodes.Wave_Button_Body.material}
                 position={buttonPosition}
                 onClick={onWaveButtonPress}
-                onPointerOver={() => setPointerOn(true)}
-                onPointerOut={() => setPointerOn(false)}
+                onPointerOver={() => {
+                    setPointerOn(true)
+                    onWaveButtonPointerOver()
+                    waveButtonOutline.onPointerOver()
+                }}
+                onPointerOut={() => {
+                    setPointerOn(false)
+                    onWaveButtonPointerOut()
+                    waveButtonOutline.onPointerOut()
+                }}
             >
             </mesh>
             <mesh
