@@ -18,6 +18,7 @@ import {ADT, match, matchPI} from "ts-adt"
 import {pipe} from "fp-ts/es6/function"
 import {LinksOverlay} from "./components/LinksOverlay"
 import {SceneStatusOverlay} from "./components/SceneStatusOverlay"
+import {getEthersReadProvider} from "./util/getEthersReadProvider"
 
 const Ground = () => {
     const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
@@ -177,24 +178,16 @@ export const FloatingTV = () => {
     }
 
     const fetchAllWaves = async () => {
-        // @ts-ignore
-        const {ethereum} = window
+        const provider = await getEthersReadProvider()
+        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
 
-        if (!ethereum) {
-            alert("You need metamask!")
-        } else {
-            //@ts-ignore
-            const provider = new ethers.providers.Web3Provider(ethereum)
-            const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
-
-            const res = await contract.getAllWaves()
-            const mapped = res.map(obj => ({
-                waver: obj.waver,
-                message: obj.message,
-                timestamp: new Date(obj.timestamp.toNumber() * 1000)
-            }))
-            setAllWaves(mapped)
-        }
+        const res = await contract.getAllWaves()
+        const mapped = res.map(obj => ({
+            waver: obj.waver,
+            message: obj.message,
+            timestamp: new Date(obj.timestamp.toNumber() * 1000)
+        }))
+        setAllWaves(mapped)
     }
 
     const wave = async () => {

@@ -15,10 +15,26 @@ export const SceneStatusOverlay: FC<{ sceneStatus: SceneStatus, onClick: () => v
             </button>
         </div>
 
-        <div className={"text-gray-500 text-sm"}>
-            <span>{"You'll need the "}</span>
-            <a className={"pointer-events-auto underline"} href={"https://metamask.io/"}>metamask extension</a>
-            <span>{" to get the full experience"}</span>
-        </div>
+        {
+            <div className={"text-gray-500 text-sm"}>
+                <p>
+                    {"By default you'll be able to read waves."}
+                </p>
+
+                <p>
+                    <span>{"If you also want to send a wave, you'll need the "}</span>
+                    <a className={"pointer-events-auto underline"} href={"https://metamask.io/"}>metamask extension</a>
+                    <span>{" connected to the rinkeby test network."}</span>
+                </p>
+
+                <p>
+                    <span>{"You can get test ethers "}</span>
+                    <a className={"pointer-events-auto underline"} href={"https://app.mycrypto.com/faucet/"}>here</a>
+                    <span>.</span>
+                </p>
+            </div>
+        }
 
     </div>
+
+
