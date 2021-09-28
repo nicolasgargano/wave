@@ -16,7 +16,8 @@ import surfaceImperfections from "../assets/SurfaceImperfections003_1K_var1.jpg"
 import surfaceImperfectionsNormals from "../assets/SurfaceImperfections003_1K_Normal.jpg"
 import {ADT, match, matchPI} from "ts-adt"
 import {pipe} from "fp-ts/es6/function"
-import {Overlay} from "./components/Overlay"
+import {LinksOverlay} from "./components/LinksOverlay"
+import {SceneStatusOverlay} from "./components/SceneStatusOverlay"
 
 const Ground = () => {
     const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
@@ -30,18 +31,10 @@ const Ground = () => {
     )
 }
 
-type IntroProps = {
-    start: boolean,
-    set: (b: boolean) => void
-}
-
-const Intro: FC<IntroProps> = ({start, set}) => {
+const CameraRig: FC<{ sceneStatus: SceneStatus }> = ({sceneStatus}) => {
     const [vec] = useState(() => new THREE.Vector3())
-    useEffect(() => {
-        setTimeout(() => set(true), 500)
-    }, [])
     return useFrame((state) => {
-        if (start) {
+        if (sceneStatus === "clicked") {
             state.camera.position.lerp(vec.set(state.mouse.x * 5, 3 + state.mouse.y * 2, 14), 0.05)
             state.camera.lookAt(0, 0, 0)
         }
@@ -75,33 +68,40 @@ const CanvasTextureTest = () => {
     )
 }
 
+export type SceneStatus = "loading" | "ready" | "clicked"
+
+export const SuspenseTrigger: FC<{triggerIf:boolean, onDoneLoading: () => void}> = ({triggerIf, onDoneLoading}) => {
+    useEffect(() => {
+        if(triggerIf)
+            onDoneLoading()
+    })
+    return null
+}
+
 export const Scene = () => {
-    const [clicked, setClicked] = useState(true)
-    const [ready, setReady] = useState(false)
-    const store = {clicked, setClicked, ready, setReady}
+    const [sceneStatus, setSceneStatus] = useState<SceneStatus>("loading")
     const debug = false
-    const lookAt = useMemo(() => new Vector3(0, 0, 0), [])
 
     return (
         <>
             <Canvas camera={{position: [0, 3, 100], fov: 15}}>
                 <color attach="background" args={["black"]}/>
-                {!debug && <fog attach="fog" args={["black", 15, 20]}/>}
                 <Suspense fallback={null}>
                     <group position={[0, -1, 0]}>
-                        {/*<Carla rotation={[0, Math.PI - 0.4, 0]} position={[-1.2, 0, 0.6]} scale={[0.26, 0.26, 0.26]} />*/}
-                        <WaveText {...store} colors={["hotpink", "blueviolet"]} position={[0, 1.3, -2]}/>
+                        <WaveText colors={["hotpink", "blueviolet"]} position={[0, 1.3, -2]}/>
                         <Ground/>
                     </group>
                     <ambientLight intensity={0.5}/>
                     <spotLight position={[-1, 2, 7]} intensity={0.2}/>
-                    {!debug && <Intro start={ready && clicked} set={setReady}/>}
                     <FloatingTV/>
+                    <SuspenseTrigger triggerIf={sceneStatus === "loading"} onDoneLoading={() => setSceneStatus("ready")}/>
                 </Suspense>
-                {debug && <OrbitControls/>}
+                {!debug && <fog attach="fog" args={["black", 15, 20]}/>}
+                {!debug ? <CameraRig sceneStatus={sceneStatus}/> : <OrbitControls/>}
                 {debug && <Stats/>}
             </Canvas>
-            <Overlay/>
+            {sceneStatus !== "clicked" && <SceneStatusOverlay sceneStatus={sceneStatus} onClick={() => setSceneStatus("clicked")}/>}
+            <LinksOverlay/>
         </>
     )
 }
