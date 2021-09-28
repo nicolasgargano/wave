@@ -2,6 +2,12 @@
 
 Say hi.
 
+### About
+
+Made this to learn about solidity and threejs.
+
+Based on the [solidity course](https://buildspace.so/solidity) by buildspace.
+
 ### Credits
 
 I made the tv in blender from these two:
