@@ -348,9 +348,6 @@ ${wave.message}`
                 geometry={nodes.Small_Button.geometry}
                 material={nodes.Small_Button.material}
                 position={nodes.Small_Button.position}
-                onClick={onSmallButtonPress}
-                onPointerOver={() => setPointerOn(true)}
-                onPointerOut={() => setPointerOn(false)}
             >
             </mesh>
             <mesh
