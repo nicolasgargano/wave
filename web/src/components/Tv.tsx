@@ -90,9 +90,6 @@ export const Tv: FC<TVProps> = ({
         document.body.style.cursor = pointerOn ? "pointer" : "auto"
     }, [pointerOn])
 
-    const knobOutline = useOutlinedObjects()
-    const waveButtonOutline = useOutlinedObjects()
-
     const buttonPosition = useMemo(() => {
         // released: -0.190326
         // pressed:  -0.175711
@@ -302,20 +299,17 @@ ${wave.message}`
                     e.stopPropagation()
                     setPointerOn(true)
                     onKnobPointerOver()
-                    knobOutline.onPointerOver()
                 }}
                 onPointerOut={(e) => {
                     e.stopPropagation()
                     setPointerOn(false)
                     onKnobPointerOut()
-                    knobOutline.onPointerOut()
                 }}
             >
             </mesh>
             <mesh
                 castShadow
                 receiveShadow
-                ref={knobOutline.ref}
                 geometry={nodes.Knob_Top_Rim.geometry}
                 material={nodes.Knob_Top_Rim.material}
                 position={nodes.Knob_Top_Rim.position}
@@ -332,13 +326,11 @@ ${wave.message}`
                     e.stopPropagation()
                     setPointerOn(true)
                     onKnobPointerOver()
-                    knobOutline.onPointerOver()
                 }}
                 onPointerOut={(e) => {
                     e.stopPropagation()
                     setPointerOn(false)
                     onKnobPointerOut()
-                    knobOutline.onPointerOut()
                 }}
             >
             </mesh>
@@ -353,7 +345,6 @@ ${wave.message}`
             <mesh
                 castShadow
                 receiveShadow
-                ref={waveButtonOutline.ref}
                 geometry={nodes.Wave_Button_Body.geometry}
                 material={nodes.Wave_Button_Body.material}
                 position={buttonPosition}
@@ -361,12 +352,10 @@ ${wave.message}`
                 onPointerOver={() => {
                     setPointerOn(true)
                     onWaveButtonPointerOver()
-                    waveButtonOutline.onPointerOver()
                 }}
                 onPointerOut={() => {
                     setPointerOn(false)
                     onWaveButtonPointerOut()
-                    waveButtonOutline.onPointerOut()
                 }}
             >
             </mesh>

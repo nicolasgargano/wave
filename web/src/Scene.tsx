@@ -2,7 +2,6 @@ import * as THREE from "three"
 import React, {
     ChangeEvent,
     FC,
-    MutableRefObject,
     Suspense,
     useEffect,
     useMemo,
@@ -11,7 +10,7 @@ import React, {
 } from "react"
 import {Canvas, useFrame} from "@react-three/fiber"
 import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
-import {Object3D, Vector2} from "three"
+import {Vector2} from "three"
 //@ts-ignore
 import { BlendFunction, Resizer, KernelSize } from "postprocessing"
 import {WaveText} from "./components/WaveText"
@@ -27,8 +26,6 @@ import {pipe} from "fp-ts/es6/function"
 import {LinksOverlay} from "./components/LinksOverlay"
 import {SceneStatusOverlay} from "./components/SceneStatusOverlay"
 import {getEthersReadProvider} from "./util/getEthersReadProvider"
-import {EffectComposer, Outline} from "@react-three/postprocessing"
-import {outlinedObjectsContext, useOutlinedObjects} from "./hooks/useOutlinedObjects"
 
 const Ground = () => {
     const [floor, normal] = useTexture([surfaceImperfections, surfaceImperfectionsNormals])
@@ -91,7 +88,6 @@ export const SuspenseTrigger: FC<{triggerIf:boolean, onDoneLoading: () => void}>
 
 export const Scene = () => {
     const [sceneStatus, setSceneStatus] = useState<SceneStatus>("loading")
-    const [outlined, setOutlined] = useState<MutableRefObject<Object3D>[]>([])
     const debug = false
 
     return (
@@ -105,23 +101,12 @@ export const Scene = () => {
                     </group>
                     <ambientLight intensity={0.5}/>
                     <spotLight position={[-1, 2, 7]} intensity={0.2}/>
-                    <outlinedObjectsContext.Provider value={setOutlined}>
-                        <FloatingTV/>
-                    </outlinedObjectsContext.Provider>
+                    <FloatingTV/>
                     <SuspenseTrigger triggerIf={sceneStatus === "loading"} onDoneLoading={() => setSceneStatus("ready")}/>
                 </Suspense>
                 {!debug && <fog attach="fog" args={["black", 15, 20]}/>}
                 {!debug ? <CameraRig sceneStatus={sceneStatus}/> : <OrbitControls/>}
                 {debug && <Stats/>}
-                <EffectComposer multisampling={8} autoClear={false}>
-                    <Outline
-                        selection={outlined}
-                        edgeStrength={5}
-                        visibleEdgeColor={0xff00ff}
-                        pulseSpeed={0.5}
-                        blur
-                    />
-                </EffectComposer>
             </Canvas>
             {sceneStatus !== "clicked" && <SceneStatusOverlay sceneStatus={sceneStatus} onClick={() => setSceneStatus("clicked")}/>}
             <LinksOverlay/>
