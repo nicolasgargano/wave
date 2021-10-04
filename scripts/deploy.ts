@@ -12,7 +12,7 @@ const main = async () => {
     console.log(`Account balance: ${accountBalance.toString()}`)
 
     const wavePortalFactory = await ethers.getContractFactory("WavePortal")
-    const waveContract = await wavePortalFactory.deploy({value: ethers.utils.parseEther("0.001")})
+    const waveContract = await wavePortalFactory.deploy({value: ethers.utils.parseEther("0.01")})
     await waveContract.deployed()
 
     console.log(`WavePortal address: ${waveContract.address}`)
