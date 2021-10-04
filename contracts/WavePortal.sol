@@ -36,7 +36,7 @@ contract WavePortal {
         console.log("%s waved with message %s", msg.sender, _message);
 
         // Prize
-        uint prizeAmount = 0.0001 ether;
+        uint prizeAmount = 0.00001 ether;
         require(prizeAmount <= address(this).balance, "Trying to withdraw more ether than the contract has.");
         (bool success,) = (msg.sender).call{value: prizeAmount}("");
         require(success, "Failed to withdraw money from contract.");
