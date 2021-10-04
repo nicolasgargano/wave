@@ -27,7 +27,7 @@ contract WavePortal {
     }
 
     function wave(string memory _message) public {
-        uint256 initialGas = gasLeft();
+        uint256 initialGas = gasleft();
 
         // Cooldown
         require(lastWavedAt[msg.sender] + 15 seconds < block.timestamp, "You can only wave once every 15 seconds!");
@@ -49,7 +49,7 @@ contract WavePortal {
         emit NewWave(msg.sender, block.timestamp, _message);
 
         // Tally gas
-        uint256 accumulatedGas = accumulatedGas + (initialGas - gasLeft());
+        accumulatedGas = accumulatedGas + (initialGas - gasleft());
     }
 
     function getAllWaves() view public returns (Wave[] memory) {
