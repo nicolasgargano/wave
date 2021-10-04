@@ -18,12 +18,12 @@ export const SceneStatusOverlay: FC<{ sceneStatus: SceneStatus, onClick: () => v
         {
             <div className={"text-gray-500 text-sm"}>
                 <p>
-                    {"By default you'll be able to read waves."}
+                    {"You can read all waves, but if you also want to send one,"}
                 </p>
 
                 <p>
-                    <span>{"If you also want to send a wave, you'll need the "}</span>
-                    <a className={"pointer-events-auto underline"} href={"https://metamask.io/"}>metamask extension</a>
+                    <span>{"you'll need "}</span>
+                    <a className={"pointer-events-auto underline"} href={"https://metamask.io/"}>metamask</a>
                     <span>{" connected to the rinkeby test network."}</span>
                 </p>
 
