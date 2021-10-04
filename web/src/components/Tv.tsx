@@ -20,6 +20,7 @@ import {ADT, match} from "ts-adt"
 import {Wave} from "../Wave"
 import {pipe} from "fp-ts/lib/function"
 import {useOutlinedObjects} from "../hooks/useOutlinedObjects"
+import instructionsUrl from "../../assets/instructions-3.png"
 
 
 export const tvScreenShader = {
@@ -100,10 +101,12 @@ export const Tv: FC<TVProps> = ({
     const sketch = (p5: P5) => {
         let shader: P5.Shader | undefined
         let font: P5.Font | undefined
+        let instructions: P5.Image | undefined
 
         p5.preload = () => {
             shader = p5.loadShader(tvScreenShader.vertexUrl, tvScreenShader.fragmentUrl)
             font = p5.loadFont(tvFontUrl)
+            instructions = p5.loadImage(instructionsUrl)
         }
 
         p5.setup = () => {
@@ -193,7 +196,13 @@ export const Tv: FC<TVProps> = ({
                         textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
                     },
                     screenSaver: () => {
-                        textLayer.text("screensaver", padding, padding, screenWidth - padding, screenHeight - padding)
+                        if (Math.sin(time * Math.PI / 7) > 0) {
+                            textLayer.text(msgBufferRef.current, padding, padding, screenWidth - padding, screenHeight - padding)
+                        } else {
+                            textLayer.scale(10)
+                            textLayer.image(instructions!, 3, 0)
+                            textLayer.scale(0.1)
+                        }
                     },
                     wave: ({wave, total, selected}) => {
                         textLayer.text(msgBufferRef.current, padding, padding, screenWidth - padding, screenHeight - padding)
@@ -260,6 +269,7 @@ export const Tv: FC<TVProps> = ({
                 centered: () => {
                 },
                 screenSaver: () => {
+                    msgBufferRef.current = new Array(25).fill("wave").join(" ")
                 },
                 wave: ({wave}) => {
                     msgBufferRef.current =

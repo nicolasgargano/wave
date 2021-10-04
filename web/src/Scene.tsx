@@ -327,7 +327,7 @@ export const FloatingTV = () => {
                 loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
                 error: ({msg}) => ({_type: "topLeft", text: msg, showCursor: false}) as TVDisplayState,
                 writing: ({msg}) => ({_type: "topLeft", text: msg, showCursor: true}) as TVDisplayState,
-                waves: () => ({_type: "topLeft", text: wavesText}) as TVDisplayState,
+                waves: () => ({_type: "screenSaver"}) as TVDisplayState,
                 viewing: ({index}) => ({
                     _type: "wave",
                     wave: model.allWaves[index],
