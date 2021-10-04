@@ -12,7 +12,7 @@ import {Canvas, useFrame} from "@react-three/fiber"
 import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
 import {Vector2} from "three"
 //@ts-ignore
-import { BlendFunction, Resizer, KernelSize } from "postprocessing"
+import {BlendFunction, Resizer, KernelSize} from "postprocessing"
 import {WaveText} from "./components/WaveText"
 import {Tv, TVDisplayState} from "./components/Tv"
 import {useCanvasTexture} from "./hooks/useCanvasTexture"
@@ -78,9 +78,9 @@ const CanvasTextureTest = () => {
 
 export type SceneStatus = "loading" | "ready" | "clicked"
 
-export const SuspenseTrigger: FC<{triggerIf:boolean, onDoneLoading: () => void}> = ({triggerIf, onDoneLoading}) => {
+export const SuspenseTrigger: FC<{ triggerIf: boolean, onDoneLoading: () => void }> = ({triggerIf, onDoneLoading}) => {
     useEffect(() => {
-        if(triggerIf)
+        if (triggerIf)
             onDoneLoading()
     })
     return null
@@ -108,7 +108,8 @@ export const Scene = () => {
                 {!debug ? <CameraRig sceneStatus={sceneStatus}/> : <OrbitControls/>}
                 {debug && <Stats/>}
             </Canvas>
-            {sceneStatus !== "clicked" && <SceneStatusOverlay sceneStatus={sceneStatus} onClick={() => setSceneStatus("clicked")}/>}
+            {sceneStatus !== "clicked" &&
+            <SceneStatusOverlay sceneStatus={sceneStatus} onClick={() => setSceneStatus("clicked")}/>}
             <LinksOverlay/>
         </>
     )
@@ -138,13 +139,16 @@ const knobRotations = [
     285
 ].map(rot => -THREE.MathUtils.degToRad(rot))
 
+type FloatingTVState = {
+    allWaves: Wave[]
+    tvState: TVState
+}
+
 export const FloatingTV = () => {
     const tvRef = useRef()
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-    const [tvState, setTvState] = useState<TVState>({_type: "waves"})
-    const [allWaves, setAllWaves] = useState<Wave[]>([])
-
+    const [model, setModel] = useState<FloatingTVState>({allWaves: [], tvState: {_type: "waves"}})
     const [knobPositionIndex, setKnobPositionIndex] = useState(1)
 
     useFrame((state) => {
@@ -161,7 +165,7 @@ export const FloatingTV = () => {
         }
 
         if (textareaRef.current) {
-            if (tvState._type === "writing" && document.activeElement?.id !== "tv-textarea-input")
+            if (model.tvState._type === "writing" && document.activeElement?.id !== "tv-textarea-input")
                 textareaRef.current.focus()
         }
     })
@@ -193,13 +197,13 @@ export const FloatingTV = () => {
             message: obj.message,
             timestamp: new Date(obj.timestamp.toNumber() * 1000)
         }))
-        setAllWaves(mapped)
+        setModel({...model, allWaves: mapped})
     }
 
     const wave = async () => {
-        if (tvState._type === "writing") {
+        if (model.tvState._type === "writing") {
             try {
-                setTvState({_type: "waitingUserAction", msg: "Check your wallet"})
+                setModel({...model, tvState: {_type: "waitingUserAction", msg: "Check your wallet"}})
                 await getWallet()
 
                 //@ts-ignore
@@ -207,32 +211,28 @@ export const FloatingTV = () => {
                 const signer = provider.getSigner()
                 const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, signer)
 
-                const waveTx = await contract.wave(tvState.msg, {gasLimit: 250_000})
+                const waveTx = await contract.wave(model.tvState.msg, {gasLimit: 250_000})
 
                 console.log("Mining...", waveTx.hash)
-                setTvState({_type: "loading"})
+                setModel({...model, tvState: {_type: "loading"}})
 
                 await waveTx.wait()
 
                 console.log("Mined --", waveTx.hash)
-
-                await fetchAllWaves()
-
-                setTvState({_type: "waves"})
             } catch (e) {
                 console.error(e)
-                setTvState({_type: "error", msg: `Error:${JSON.stringify(e)}`})
+                setModel({...model, tvState: {_type: "error", msg: `Error:${JSON.stringify(e)}`}})
             }
         } else {
-            setTvState({_type: "writing", msg: ""})
+            setModel({...model, tvState: {_type: "writing", msg: ""}})
         }
     }
 
     const nextWave = async () => {
-        setTvState(currentTvState => pipe(
-            currentTvState,
+        setModel(currentModel => pipe(
+            currentModel.tvState,
             match({
-                viewing: ({index}) => index === allWaves.length - 1
+                viewing: ({index}) => index === currentModel.allWaves.length - 1
                     ? ({_type: "waves"})
                     : ({_type: "viewing", index: index + 1}),
                 waves: () => ({_type: "viewing", index: 0}),
@@ -241,8 +241,9 @@ export const FloatingTV = () => {
                 loading: () => ({_type: "waves"}),
                 waitingUserAction: () => ({_type: "waves"}),
             }),
-            state => state as TVState
+            newTvState => ({...model, tvState: newTvState}) as FloatingTVState
         ))
+
         setKnobPositionIndex(curr =>
             curr === knobRotations.length - 1
                 ? 0
@@ -251,8 +252,8 @@ export const FloatingTV = () => {
     }
 
     const previousWave = async () => {
-        setTvState(currentTvState => pipe(
-            currentTvState,
+        setModel(currentModel => pipe(
+            currentModel.tvState,
             match({
                 viewing: ({index}) => index === 0
                     ? ({_type: "waves"})
@@ -263,31 +264,64 @@ export const FloatingTV = () => {
                 loading: () => ({_type: "waves"}),
                 waitingUserAction: () => ({_type: "waves"}),
             }),
-            state => state as TVState
+            newTvState => ({...model, tvState: newTvState}) as FloatingTVState
         ))
         setKnobPositionIndex(curr =>
             curr === 0
                 ? knobRotations.length - 1
-                : curr -1
+                : curr - 1
         )
     }
 
     const onTextAreaInput = (ev: ChangeEvent<HTMLTextAreaElement>) => {
         console.log("ontextareainput", ev.target.value)
-        setTvState(
-            tvState._type === "writing"
-                ? ({_type: "writing", msg: ev.target.value})
-                : tvState
+        setModel(
+            model.tvState._type === "writing"
+                ? ({...model, tvState: {_type: "writing", msg: ev.target.value}})
+                : model
         )
     }
 
     useEffect(() => {
+        subscribeToNewWaves()
         fetchAllWaves()
     }, [])
 
+    const subscribeToNewWaves = async () => {
+        const provider = await getEthersReadProvider()
+        const contract = WavePortal__factory.connect(import.meta.env.VITE_CONTRACT_ADDRESS, provider)
+        contract.on(contract.filters.NewWave(), async (_, __, ___, event) => {
+            const wave: Wave = {
+                waver: event.args.from,
+                message: event.args.message,
+                timestamp: new Date(event.args.timestamp.toNumber() * 1000)
+            }
+
+            console.log("new wave: ", wave)
+
+            //@ts-ignore
+            if (window.ethereum) {
+                //@ts-ignore
+                const web3Provider = new ethers.providers.Web3Provider(window.ethereum)
+                const accounts = await web3Provider.listAccounts()
+                console.log("accounts list", accounts)
+                if (accounts[0] === wave.waver) {
+                    setModel(curr => ({
+                        ...model,
+                        allWaves: [...curr.allWaves, wave],
+                        tvState: {_type: "viewing", index: curr.allWaves.length}
+                    }))
+                }
+            } else {
+                setModel(curr => ({...model, allWaves: [...curr.allWaves, wave]}))
+            }
+        })
+
+    }
+
     const calcState = (): TVDisplayState =>
         pipe(
-            tvState,
+            model.tvState,
             match({
                 waitingUserAction: ({msg}) => ({_type: "topLeft", text: msg}) as TVDisplayState,
                 loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
@@ -296,8 +330,8 @@ export const FloatingTV = () => {
                 waves: () => ({_type: "topLeft", text: wavesText}) as TVDisplayState,
                 viewing: ({index}) => ({
                     _type: "wave",
-                    wave: allWaves[index],
-                    total: allWaves.length,
+                    wave: model.allWaves[index],
+                    total: model.allWaves.length,
                     selected: index
                 }) as TVDisplayState,
             })
@@ -306,7 +340,7 @@ export const FloatingTV = () => {
     const stateToUse = calcState()
 
     const buttonDepth = pipe(
-        tvState,
+        model.tvState,
         match({
             waitingUserAction: () => 0,
             loading: () => 0,
@@ -320,7 +354,7 @@ export const FloatingTV = () => {
     return (
         <group position={[0, 0.5, 0]}>
             {
-                tvState._type === "writing" &&
+                model.tvState._type === "writing" &&
                 <Html>
                     {/* I need a textarea to handle the inputs because it's the best way I found.
                     I considered handling keydowns but it gets wonky with special keys.
@@ -332,7 +366,7 @@ export const FloatingTV = () => {
                         <textarea
                             ref={textareaRef}
                             id={"tv-textarea-input"}
-                            value={tvState.msg}
+                            value={model.tvState.msg}
                             onChange={onTextAreaInput}
                         />
                     </div>
