@@ -27,6 +27,8 @@ contract WavePortal {
     }
 
     function wave(string memory _message) public {
+        uint256 initialGas = gasLeft();
+
         // Cooldown
         require(lastWavedAt[msg.sender] + 15 seconds < block.timestamp, "You can only wave once every 15 seconds!");
         lastWavedAt[msg.sender] = block.timestamp;
@@ -41,13 +43,13 @@ contract WavePortal {
         (bool success,) = (msg.sender).call{value: prizeAmount}("");
         require(success, "Failed to withdraw money from contract.");
 
-        // Tally gas
-        accumulatedGas = accumulatedGas + tx.gasprice;
-
         // Add wave
         waves.push(Wave(msg.sender, _message, block.timestamp));
         wavesByAddress[msg.sender].push(Wave(msg.sender, _message, block.timestamp));
         emit NewWave(msg.sender, block.timestamp, _message);
+
+        // Tally gas
+        uint256 accumulatedGas = accumulatedGas + (initialGas - gasLeft());
     }
 
     function getAllWaves() view public returns (Wave[] memory) {
