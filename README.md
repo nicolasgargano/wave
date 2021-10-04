@@ -10,7 +10,7 @@ Based on the [solidity course](https://buildspace.so/solidity) by buildspace.
 
 ### Credits
 
-I made the tv in blender from these two:
+I made the tv in [blender](https://www.blender.org/) from these two:
 - [TV model](https://polyhaven.com/a/Television_01) by Gabriel Radić
 - [Button](https://sketchfab.com/3d-models/the-doomsday-remote-control-226bfc151fb84cf8996d9fa25066489f) by Santiago Shang
 
