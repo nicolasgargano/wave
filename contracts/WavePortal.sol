@@ -57,4 +57,9 @@ contract WavePortal {
         console.log("Total of %d waves", totalWaves);
         return totalWaves;
     }
+
+    function getAccumulatedGas() view public returns (uint) {
+        console.log("Accumulated gas", accumulatedGas);
+        return accumulatedGas;
+    }
 }
