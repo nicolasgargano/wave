@@ -66,7 +66,7 @@ contract WavePortal {
         return accumulatedGas;
     }
 
-    function wavesFromAddress(address _address) view public returns (Wave[] memory) {
-        return wavesFromAddress[_address];
+    function getWavesFromAddress(address _address) view public returns (Wave[] memory) {
+        return wavesByAddress[_address];
     }
 }
