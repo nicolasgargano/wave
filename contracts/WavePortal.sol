@@ -27,7 +27,7 @@ contract WavePortal {
 
     function wave(string memory _message) public {
         // Cooldown
-        require(lastWavedAt[msg.sender] + 1 minutes < block.timestamp, "You can only wave once every 15 minutes!");
+        require(lastWavedAt[msg.sender] + 15 seconds < block.timestamp, "You can only wave once every 15 seconds!");
         lastWavedAt[msg.sender] = block.timestamp;
 
         // Count waves
