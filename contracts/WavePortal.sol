@@ -5,11 +5,6 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 
 contract WavePortal {
-    mapping(address => uint) public wavesByAddress;
-    mapping(address => uint) public lastWavedAt;
-    uint totalWaves;
-
-    event NewWave(address indexed from, uint timestamp, string message);
 
     struct Wave {
         address waver;
@@ -18,6 +13,12 @@ contract WavePortal {
     }
 
     Wave[] waves;
+    uint totalWaves;
+
+    event NewWave(address indexed from, uint timestamp, string message);
+
+    mapping(address => Wave[]) public wavesByAddress;
+    mapping(address => uint) public lastWavedAt;
 
     uint accumulatedGas;
 
@@ -31,7 +32,6 @@ contract WavePortal {
         lastWavedAt[msg.sender] = block.timestamp;
 
         // Count waves
-        wavesByAddress[msg.sender] = wavesByAddress[msg.sender] + 1;
         totalWaves = totalWaves + 1;
         console.log("%s waved with message %s", msg.sender, _message);
 
@@ -46,6 +46,7 @@ contract WavePortal {
 
         // Add wave
         waves.push(Wave(msg.sender, _message, block.timestamp));
+        wavesByAddress[msg.sender].push(Wave(msg.sender, _message, block.timestamp));
         emit NewWave(msg.sender, block.timestamp, _message);
     }
 
@@ -61,5 +62,9 @@ contract WavePortal {
     function getAccumulatedGas() view public returns (uint) {
         console.log("Accumulated gas", accumulatedGas);
         return accumulatedGas;
+    }
+
+    function wavesFromAddress(address _address) view public returns (Wave[] memory) {
+        return wavesFromAddress[_address];
     }
 }
