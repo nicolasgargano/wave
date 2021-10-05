@@ -241,7 +241,7 @@ export const FloatingTV = () => {
                 viewing: ({index}) => index === 0
                     ? ({_type: "waves"})
                     : ({_type: "viewing", index: index - 1}),
-                waves: () => ({_type: "viewing", index: 0}),
+                waves: () => ({_type: "viewing", index: currentModel.allWaves.length - 1}),
                 writing: () => ({_type: "waves"}),
                 error: () => ({_type: "waves"}),
                 loading: () => ({_type: "waves"}),
