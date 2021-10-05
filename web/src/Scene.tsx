@@ -48,6 +48,20 @@ const CameraRig: FC<{ sceneStatus: SceneStatus }> = ({sceneStatus}) => {
     })
 }
 
+// TODO 3-point lighting
+//   - RectAreaLights can't cast shadows https://threejs.org/docs/#api/en/lights/RectAreaLight
+//       but two point lights work well for the fill light
+//   - The spotlight works well as is for key light
+//   - Magenta lighting works well
+//   - I need to separate the screen from the body so I can make its material emmissive
+
+const Lights = () => {
+    return <>
+        <ambientLight intensity={0.5}/>
+        <spotLight position={[-1, 2, 7]} intensity={0.2}/>
+    </>
+}
+
 export type SceneStatus = "loading" | "ready" | "clicked"
 
 export const SuspenseTrigger: FC<{ triggerIf: boolean, onDoneLoading: () => void }> = ({triggerIf, onDoneLoading}) => {
@@ -71,8 +85,7 @@ export const Scene = () => {
                         <WaveText colors={["hotpink", "blueviolet"]} position={[0, 1.3, -2]}/>
                         <Ground/>
                     </group>
-                    <ambientLight intensity={0.5}/>
-                    <spotLight position={[-1, 2, 7]} intensity={0.2}/>
+                    <Lights/>
                     <FloatingTV/>
                     <SuspenseTrigger triggerIf={sceneStatus === "loading"} onDoneLoading={() => setSceneStatus("ready")}/>
                 </Suspense>
