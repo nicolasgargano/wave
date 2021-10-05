@@ -88,12 +88,12 @@ export const Scene = () => {
 }
 
 type TVState = ADT<{
-    loading: {},
+    loading: Record<string, unknown>,
     waitingUserAction: { msg: string },
     error: { msg: string },
     writing: { msg: string },
     viewing: { index: number },
-    waves: {}
+    waves: Record<string, unknown>
 }>
 
 const knobRotations = [

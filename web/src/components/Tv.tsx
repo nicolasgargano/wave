@@ -29,7 +29,7 @@ export const tvScreenShader = {
 }
 
 export type TVDisplayState = ADT<{
-    screenSaver: {}
+    screenSaver: Record<string, unknown>
     centered: { text: string }
     wave: { wave: Wave, total: number, selected: number }
     topLeft: { text: string, showCursor: boolean }
