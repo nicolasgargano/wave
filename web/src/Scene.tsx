@@ -9,13 +9,12 @@ import React, {
     useState
 } from "react"
 import {Canvas, useFrame} from "@react-three/fiber"
-import {Reflector, useTexture, OrbitControls, Box, Stats, Html} from "@react-three/drei"
+import {Reflector, useTexture, OrbitControls, Stats, Html} from "@react-three/drei"
 import {Vector2} from "three"
 //@ts-ignore
 import {BlendFunction, Resizer, KernelSize} from "postprocessing"
 import {WaveText} from "./components/WaveText"
 import {Tv, TVDisplayState} from "./components/Tv"
-import {useCanvasTexture} from "./hooks/useCanvasTexture"
 import {Wave} from "./Wave"
 import {ethers} from "ethers"
 import {WavePortal__factory} from "../../typechain"
@@ -47,33 +46,6 @@ const CameraRig: FC<{ sceneStatus: SceneStatus }> = ({sceneStatus}) => {
             state.camera.lookAt(0, 0, 0)
         }
     })
-}
-
-const CanvasTextureTest = () => {
-
-    const canvasRef = useRef<HTMLCanvasElement | null>(null)
-    const texture = useCanvasTexture(canvasRef.current)
-
-    useEffect(() => {
-        const canvas: HTMLCanvasElement = document.createElement("canvas")
-        canvasRef.current = canvas
-        canvas.width = 400
-        canvas.height = 400
-        canvas.hidden = true
-        const ctx = canvas.getContext("2d")!
-
-        ctx.fillStyle = "red"
-        ctx.fillRect(10, 10, 100, 100)
-        ctx.beginPath()
-        ctx.arc(95, 50, 40, 0, 2 * Math.PI)
-        ctx.stroke()
-    })
-
-    return (
-        <Box>
-            <meshStandardMaterial color="white" map={texture}/>
-        </Box>
-    )
 }
 
 export type SceneStatus = "loading" | "ready" | "clicked"
@@ -123,8 +95,6 @@ type TVState = ADT<{
     viewing: { index: number },
     waves: {}
 }>
-
-const wavesText: string = new Array(25).fill("wave").join(" ")
 
 const knobRotations = [
     -30,
