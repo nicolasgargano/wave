@@ -1,6 +1,6 @@
 # wave
 
-Say hi.
+Say hi. https://wave.nicolasgargano.dev
 
 ### About
 
