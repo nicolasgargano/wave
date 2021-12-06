@@ -302,25 +302,22 @@ export const FloatingTV = () => {
 
     }
 
-    const calcState = (): TVDisplayState =>
-        pipe(
-            model.tvState,
-            match({
-                waitingUserAction: ({msg}) => ({_type: "topLeft", text: msg}) as TVDisplayState,
-                loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
-                error: ({msg}) => ({_type: "topLeft", text: msg, showCursor: false}) as TVDisplayState,
-                writing: ({msg}) => ({_type: "topLeft", text: msg, showCursor: true}) as TVDisplayState,
-                waves: () => ({_type: "screenSaver"}) as TVDisplayState,
-                viewing: ({index}) => ({
-                    _type: "wave",
-                    wave: model.allWaves[index],
-                    total: model.allWaves.length,
-                    selected: index
-                }) as TVDisplayState,
-            })
-        )
-
-    const stateToUse = calcState()
+    const tvDisplayState = useMemo(() => pipe(
+        model.tvState,
+        match({
+            waitingUserAction: ({msg}) => ({_type: "topLeft", text: msg}) as TVDisplayState,
+            loading: () => ({_type: "topLeft", text: "Mining..."}) as TVDisplayState,
+            error: ({msg}) => ({_type: "topLeft", text: msg, showCursor: false}) as TVDisplayState,
+            writing: ({msg}) => ({_type: "topLeft", text: msg, showCursor: true}) as TVDisplayState,
+            waves: () => ({_type: "screenSaver"}) as TVDisplayState,
+            viewing: ({index}) => ({
+                _type: "wave",
+                wave: model.allWaves[index],
+                total: model.allWaves.length,
+                selected: index
+            }) as TVDisplayState,
+        })
+    ), [model.tvState, model.allWaves])
 
     const buttonDepth = pipe(
         model.tvState,
@@ -358,7 +355,7 @@ export const FloatingTV = () => {
 
             <group ref={tvRef} position={[0, -1, -0.5]}>
                 <Tv
-                    state={stateToUse}
+                    state={tvDisplayState}
                     knobRotationRad={knobRotations[knobPositionIndex]}
                     buttonDepthNormalized={buttonDepth}
                     onKnobForwards={nextWave}
