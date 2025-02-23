@@ -1,10 +1,10 @@
 {
   "type": "module",
   "private": true,
-  "name": "wave-portal",
+  "name": "wave",
   "author": "Nicolás Gargano",
   "license": "BSD-3-Clause",
-  "version": "0.0.2",
+  "version": "2.0.0",
   "description": "say hi",
   "scripts": {
     "dev": "vinxi dev",
