@@ -24,7 +24,7 @@ export const Route = createRootRoute({
       ...seo({
         title: "wave",
         description: "say hi",
-        image: "https://i.ibb.co/D4XmPQf/meta.png",
+        image: "/meta.png",
       }),
     ],
     links: [
