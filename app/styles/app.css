@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 html,
 body,
 #app {
@@ -9,5 +11,14 @@ body,
 }
 
 body {
+  color: white;
   background: #000000ff;
+}
+
+@font-face {
+  font-family: "VT323-Regular";
+  src: url("/VT323-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }

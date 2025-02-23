@@ -11,14 +11,14 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as TestImport } from './routes/test'
+import { Route as TvdebugImport } from './routes/tvdebug'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
 
-const TestRoute = TestImport.update({
-  id: '/test',
-  path: '/test',
+const TvdebugRoute = TvdebugImport.update({
+  id: '/tvdebug',
+  path: '/tvdebug',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -39,11 +39,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/test': {
-      id: '/test'
-      path: '/test'
-      fullPath: '/test'
-      preLoaderRoute: typeof TestImport
+    '/tvdebug': {
+      id: '/tvdebug'
+      path: '/tvdebug'
+      fullPath: '/tvdebug'
+      preLoaderRoute: typeof TvdebugImport
       parentRoute: typeof rootRoute
     }
   }
@@ -53,37 +53,37 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/test': typeof TestRoute
+  '/tvdebug': typeof TvdebugRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/test': typeof TestRoute
+  '/tvdebug': typeof TvdebugRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/test': typeof TestRoute
+  '/tvdebug': typeof TvdebugRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/test'
+  fullPaths: '/' | '/tvdebug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/test'
-  id: '__root__' | '/' | '/test'
+  to: '/' | '/tvdebug'
+  id: '__root__' | '/' | '/tvdebug'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  TestRoute: typeof TestRoute
+  TvdebugRoute: typeof TvdebugRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  TestRoute: TestRoute,
+  TvdebugRoute: TvdebugRoute,
 }
 
 export const routeTree = rootRoute
@@ -97,14 +97,14 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/test"
+        "/tvdebug"
       ]
     },
     "/": {
       "filePath": "index.tsx"
     },
-    "/test": {
-      "filePath": "test.tsx"
+    "/tvdebug": {
+      "filePath": "tvdebug.tsx"
     }
   }
 }

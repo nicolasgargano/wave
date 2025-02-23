@@ -1,11 +1,11 @@
 precision mediump float;
 
 uniform vec2 u_resolution;
-uniform int u_frame;
-uniform float u_time;
+// uniform int u_frame;
+// uniform sampler2D u_original_screen_texture;
 
+uniform float u_time;
 uniform sampler2D u_text_layer;
-uniform sampler2D u_original_screen_texture;
 
 float density = 1.3;
 float opacityScanline = 0.3;
@@ -20,8 +20,9 @@ float random (vec2 st) {
 }
 
 vec4 vignette(vec2 uv, vec4 at) {
-	  float dx = 1.3 * abs(uv.x - .5);
-	  float dy = 1.3 * abs(uv.y - .5);
+    float mul = 1.3;
+	float dx = mul * abs(uv.x - .5);
+	float dy = mul * abs(uv.y - .5);
     return at * (1.0 - dx * dx - dy * dy);
 }
 
@@ -39,7 +40,7 @@ void main() {
     // st.y = 1.0 - st.y;
 
     // screen scanline
-    float scanline = sin(st.y*3.1415*220.0)*.5+.5;
+    float scanline = sin(st.y*3.1415*110.0)*.5+.5;
     scanline = sqrt(scanline);
 
     // Glitch uv

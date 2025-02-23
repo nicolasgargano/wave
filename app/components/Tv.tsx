@@ -1,438 +1,436 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react"
-import { GroupProps, useThree } from "@react-three/fiber"
-import { useGLTF } from "@react-three/drei"
-import {
-  CanvasTexture,
-  MeshStandardMaterial,
-  sRGBEncoding,
-  Texture,
-  Vector2,
-  Vector3,
-} from "three"
-import P5, { Graphics } from "p5"
+import { GroupProps, ThreeEvent, useFrame, useThree } from "@react-three/fiber"
+import { useCallback, useMemo } from "react"
+import * as THREE from "three"
+import { Plane, useGLTF } from "@react-three/drei"
+import fragmentShader from "~/assets/frag.glsl?raw"
+import { Wave } from "~/Wave"
+import React from "react"
+import { LINE_LENGTH } from "~/utils"
 
-// top-left and bottom-right corners of the screen in the albedo/diffuse texture
-// these values come from viewing the UV coordinates in blender
-export const [screenX1, screenY1] = [148, 4096 - 1159]
-export const [screenX2, screenY2] = [1403, 4096 - 211]
-export const [screenWidth, screenHeight] = [
-  screenX2 - screenX1,
-  screenY2 - screenY1,
+// These values come from viewing the UV coordinates in blender
+const [screenX1, screenY1] = [148, 4096 - 1159]
+const [screenX2, screenY2] = [1403, 4096 - 211]
+const [screenWidth, screenHeight] = [screenX2 - screenX1, screenY2 - screenY1]
+const ratio = screenWidth / screenHeight
+const screenContentsPos = new THREE.Vector2(screenX1, screenY1)
+
+export type ScreenState =
+  | {
+      _tag: "instructions"
+    }
+  | {
+      _tag: "waves"
+    }
+  | {
+      _tag: "wave_display"
+      wave: Wave
+      total: number
+      selected: number
+    }
+  | {
+      _tag: "message_input"
+      input: string
+      lines: string[]
+    }
+
+const knobRotationRad: Record<KnobPosition, number> = {
+  "1": -THREE.MathUtils.degToRad(-30),
+  "2": -THREE.MathUtils.degToRad(0),
+  "3": -THREE.MathUtils.degToRad(35),
+  "4": -THREE.MathUtils.degToRad(73),
+  "5": -THREE.MathUtils.degToRad(107),
+  "6": -THREE.MathUtils.degToRad(143),
+  "7": -THREE.MathUtils.degToRad(176),
+  "8": -THREE.MathUtils.degToRad(212),
+  "9": -THREE.MathUtils.degToRad(246),
+  U: -THREE.MathUtils.degToRad(285),
+}
+
+export const knobPositions = [
+  "U",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+] as const
+
+const waves = [
+  "wave wave wave wave wave",
+  "wave wave wave wave wave",
+  "wave wave wave wave wave",
+  "wave wave wave wave wave",
+  "wave wave wave wave wave",
 ]
 
-const vertUrl = "/shaders/vertex.vert"
-const fragUrl = "/shaders/frag.glsl"
+export type KnobPosition = (typeof knobPositions)[number]
+export type WaveButtonState = "pressed" | "half-pressed" | "released"
 
-import { ADT, match } from "ts-adt"
-import { pipe } from "fp-ts/lib/function"
-import { useOutlinedObjects } from "../hooks/useOutlinedObjects"
-import { Wave } from "~/Wave"
-
-export const tvScreenShader = {
-  vertexUrl: vertUrl,
-  fragmentUrl: fragUrl,
-}
-
-export type TVDisplayState = ADT<{
-  screenSaver: Record<string, unknown>
-  centered: { text: string }
-  wave: { wave: Wave; total: number; selected: number }
-  topLeft: { text: string; showCursor: boolean }
-}>
-
-export type TVProps = GroupProps & {
-  state: TVDisplayState
-  knobRotationRad: number
-  buttonDepthNormalized: number
-  onKnobForwards?: () => void
-  onKnobBackwards?: () => void
-  onKnobPointerOver?: () => void
-  onKnobPointerOut?: () => void
+export type TvProps = GroupProps & {
+  screenState: ScreenState
+  knobPosition: KnobPosition
+  waveButtonState: WaveButtonState
+  onKnobNext?: () => void
+  onKnobPrev?: () => void
   onWaveButtonPress?: () => void
-  onWaveButtonPointerOver?: () => void
-  onWaveButtonPointerOut?: () => void
-  onSmallButtonPress?: () => void
 }
 
-export const Tv: FC<TVProps> = ({
-  state,
-  position,
-  knobRotationRad,
-  buttonDepthNormalized,
-  onKnobForwards = () => {},
-  onKnobBackwards = () => {},
-  onKnobPointerOver = () => {},
-  onKnobPointerOut = () => {},
-  onWaveButtonPress = () => {},
-  onWaveButtonPointerOver = () => {},
-  onWaveButtonPointerOut = () => {},
-  onSmallButtonPress = () => {},
-  ...props
-}) => {
-  const gltf = useGLTF("/tv.glb", true)
-  //@ts-ignore
-  const { nodes } = gltf
+export const TV = React.forwardRef<THREE.Group, TvProps>((props, ref) => {
+  const gltf = useGLTF("/tv.glb") as any
+  const gl = useThree((s) => s.gl)
 
-  const screenContentsGraphicsRef = useRef<Graphics | null>(null)
-  const screenContentsTextureRef = useRef<Texture | null>(null)
+  const [resources, setResources] = React.useState<{
+    ctx: CanvasRenderingContext2D
+    canvasTexture: THREE.CanvasTexture
+    renderTarget: THREE.WebGLRenderTarget
+    shaderScene: THREE.Scene
+    shaderQuad: THREE.Mesh<
+      THREE.PlaneGeometry,
+      THREE.ShaderMaterial,
+      THREE.Object3DEventMap
+    >
+    shaderCamera: THREE.Camera
+    img: HTMLImageElement
+  } | null>(null)
 
-  const textGraphicsRef = useRef<Graphics | null>(null)
-  const originalScreenGraphicsRef = useRef<Graphics | null>(null)
+  React.useEffect(() => {
+    const canvas = document.createElement("canvas")
+    canvas.width = screenWidth
+    canvas.height = screenHeight
+    canvas.style.fontFeatureSettings = `"liga" 0`
+    canvas.style.fontVariantLigatures = "none"
+    const ctx = canvas.getContext("2d")!
+    ctx.imageSmoothingEnabled = false
 
-  const screenContentsPosRef = useRef(new Vector2(screenX1, screenY1))
-  const finalDiffuseTextureRef = useRef<Texture | null>(null)
+    const img = new Image()
+    img.src = "/instructions-3.png"
 
-  const gl = useThree((three) => three.gl)
-
-  const msgRef = useRef<TVDisplayState>({
-    _type: "topLeft",
-    text: new Array(25).fill("waves").join(" "),
-    showCursor: false,
-  })
-
-  const msgBufferRef = useRef<string>("")
-
-  const [pointerOn, setPointerOn] = useState(false)
-  useEffect(() => {
-    document.body.style.cursor = pointerOn ? "pointer" : "auto"
-  }, [pointerOn])
-
-  const buttonPosition = useMemo(() => {
-    // released: -0.190326
-    // pressed:  -0.175711
-    const posFromModel = nodes.Wave_Button_Body.position as Vector3
-    return new Vector3(posFromModel.x, posFromModel.y, 0.175711).lerp(
-      posFromModel,
-      buttonDepthNormalized
+    const canvasTexture = new THREE.CanvasTexture(canvas)
+    const renderTarget = new THREE.WebGLRenderTarget(
+      screenWidth,
+      screenHeight,
+      {
+        format: gltf.nodes.Body.material.map.format,
+        type: gltf.nodes.Body.material.map.type,
+        minFilter: gltf.nodes.Body.material.map.minFilter,
+        magFilter: gltf.nodes.Body.material.map.magFilter,
+        generateMipmaps: gltf.nodes.Body.material.map.generateMipmaps,
+      }
     )
-  }, [buttonDepthNormalized])
 
-  const sketch = (p5: P5) => {
-    let shader: P5.Shader | undefined
-    let font: P5.Font | undefined
-    let instructions: P5.Image | undefined
+    const shaderScene = new THREE.Scene()
+    const shaderCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10)
+    shaderCamera.position.z = 1
 
-    p5.preload = () => {
-      shader = p5.loadShader(
-        tvScreenShader.vertexUrl,
-        tvScreenShader.fragmentUrl
-      )
-      font = p5.loadFont("/VT323-Regular.ttf")
-      instructions = p5.loadImage("/instructions-3.png")
-    }
-
-    p5.setup = () => {
-      p5.noCanvas()
-      p5.pixelDensity(1)
-
-      // -- TV TEXTURE
-      const finalDiffuseRenderer = p5.createGraphics(4096, 4096)
-      //@ts-ignore, this property does exist https://p5js.org/reference/#/p5/drawingContext
-      const ctx: CanvasRenderingContext2D = finalDiffuseRenderer.drawingContext
-
-      // Copy the entire original diffuse texture
-      const material = nodes.Body.material as MeshStandardMaterial
-      const diffuseMap = material.map?.image
-      ctx.drawImage(diffuseMap, 0, 0)
-      ctx.rotate(Math.PI)
-
-      // Create the texture
-      const tex = new CanvasTexture(ctx.canvas)
-      tex.encoding = sRGBEncoding
-      tex.flipY = false
-      material.map = tex
-      finalDiffuseTextureRef.current = tex
-
-      // -- SCREEN BUFFERS
-      const textGraphics = p5.createGraphics(screenWidth, screenHeight)
-      textGraphicsRef.current = textGraphics
-      const screenContentsGraphics = p5.createGraphics(
-        screenWidth,
-        screenHeight,
-        p5.WEBGL
-      )
-      screenContentsGraphicsRef.current = screenContentsGraphics
-
-      // -- SCREEN TEXTURE
-      const screenContentsTex = new CanvasTexture(
-        screenContentsGraphics.drawingContext.canvas
-      )
-      screenContentsTextureRef.current = screenContentsTex
-      screenContentsTex.encoding = sRGBEncoding
-      screenContentsTex.flipY = false
-
-      // Copy the screen section of the original texture to the buffer
-      const originalScreenGraphics = p5.createGraphics(
-        screenWidth,
-        screenHeight
-      )
-      originalScreenGraphicsRef.current = originalScreenGraphics
-      //@ts-ignore, this property does exist https://p5js.org/reference/#/p5/drawingContext
-      const originalScreenCtx: CanvasRenderingContext2D =
-        originalScreenGraphics.drawingContext
-      originalScreenCtx.drawImage(
-        diffuseMap,
-        screenX1,
-        screenY1,
-        screenWidth,
-        screenHeight,
-        0,
-        0,
-        screenWidth,
-        screenHeight
-      )
-
-      // -- TEXT STYLES
-      textGraphics.textSize(100)
-      textGraphics.fill(255, 0, 255)
-      textGraphics.textAlign(textGraphics.LEFT, textGraphics.TOP)
-      textGraphics.textFont(font!)
-
-      // -- SHADER SETUP
-      shader?.setUniform("u_resolution", [screenWidth, screenHeight])
-      shader?.setUniform("u_original_screen_texture", originalScreenGraphics!)
-    }
-
-    p5.draw = () => {
-      if (!shader) throw new Error("Shader not loaded")
-      const screenContents = screenContentsGraphicsRef.current!
-      const textLayer = textGraphicsRef.current!
-      const originalScreenGraphics = originalScreenGraphicsRef.current!
-      const padding = 100
-
-      const time = p5.millis() / 1000
-      const frame = p5.frameCount
-
-      textLayer.background(30, 0, 30)
-
-      pipe(
-        msgRef.current,
-        match({
-          topLeft: ({ text, showCursor }) => {
-            textLayer.text(
-              text,
-              padding,
-              padding,
-              screenWidth - padding,
-              screenHeight - padding
-            )
-            if (showCursor) {
-              // const fill = THREE.MathUtils.mapLinear(Math.sin(time*5), -1, 1, 30, 255)
-              const fill = Math.sin(time * 5) < 0 ? 30 : 255
-              textLayer.fill(fill, 0, fill)
-              textLayer.text(
-                msgBufferRef.current,
-                padding,
-                padding,
-                screenWidth - padding,
-                screenHeight - padding
-              )
-              textLayer.fill(255, 0, 255)
-            }
+    const shaderQuad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({
+        vertexShader: "void main() { gl_Position = vec4(position, 1.0); }",
+        fragmentShader,
+        uniforms: {
+          u_time: { value: 0 },
+          u_resolution: {
+            value: new THREE.Vector2(screenWidth, screenHeight),
           },
-          centered: ({ text }) => {
-            textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
-            textLayer.text(
-              text,
-              padding,
-              padding,
-              screenWidth - padding,
-              screenHeight - padding
-            )
-            textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
-          },
-          screenSaver: () => {
-            if (Math.sin((time * Math.PI) / 7) > 0) {
-              textLayer.text(
-                msgBufferRef.current,
-                padding,
-                padding,
-                screenWidth - padding,
-                screenHeight - padding
-              )
-            } else {
-              textLayer.scale(10)
-              textLayer.image(instructions!, 3, 0)
-              textLayer.scale(0.1)
-            }
-          },
-          wave: ({ wave, total, selected }) => {
-            textLayer.text(
-              msgBufferRef.current,
-              padding,
-              padding,
-              screenWidth - padding,
-              screenHeight - padding
-            )
-            textLayer.textAlign(textLayer.RIGHT, textLayer.BOTTOM)
-            textLayer.text(
-              `${(selected + 1).toString().padStart(2, "0")}/${total
-                .toString()
-                .padStart(2, "0")}`,
-              screenWidth - padding,
-              screenHeight - padding
-            )
-            textLayer.textAlign(textLayer.LEFT, textLayer.TOP)
-          },
-        })
-      )
-
-      // SHADER STUFF
-      shader.setUniform("u_time", time)
-      shader.setUniform("u_frame", frame)
-      shader.setUniform("u_text_layer", textLayer)
-      shader.setUniform("u_resolution", [screenWidth, screenHeight])
-
-      // TODO Why does it keep its value after setting it a couple of frames
-      //  but not if I set it only on the first one or in the setup?
-      //  It seems something is unsetting it
-      if (frame < 10)
-        shader.setUniform("u_original_screen_texture", originalScreenGraphics)
-
-      // Overlay text
-      screenContents.image(textLayer, 0, 0)
-
-      // Apply shader
-      screenContents.shader(shader)
-      screenContents.rect(0, 0, screenWidth, screenHeight)
-
-      // COPY TO TV TEXTURE
-      gl.copyTextureToTexture(
-        screenContentsPosRef.current,
-        screenContentsTextureRef.current!,
-        finalDiffuseTextureRef.current!
-      )
-    }
-  }
-
-  useEffect(() => {
-    console.log(nodes)
-    new P5(sketch)
-  }, [])
-
-  useEffect(() => {
-    msgRef.current = state
-    pipe(
-      msgRef.current,
-      match({
-        topLeft: ({ text, showCursor }) => {
-          if (showCursor) {
-            // replace any of the non space glyphs in the font for non breaking spaces
-            const t = text.replaceAll(/\S/g, " ")
-            msgBufferRef.current = t + "["
-          } else {
-            msgBufferRef.current = ""
-          }
-        },
-        centered: () => {},
-        screenSaver: () => {
-          msgBufferRef.current = new Array(25).fill("wave").join(" ")
-        },
-        wave: ({ wave }) => {
-          msgBufferRef.current = `${wave.waver.substr(
-            0,
-            22
-          )}... ${wave.timestamp.toISOString()}:
-${wave.message}`
+          u_text_layer: { value: canvasTexture },
         },
       })
     )
-  }, [state])
+
+    shaderScene.add(shaderQuad)
+
+    setResources({
+      ctx,
+      canvasTexture,
+      renderTarget,
+      shaderScene,
+      shaderQuad,
+      shaderCamera,
+      img,
+    })
+
+    return () => {
+      canvas.remove()
+      canvasTexture.dispose()
+      renderTarget.dispose()
+      shaderQuad.geometry.dispose()
+      shaderQuad.material.dispose()
+      shaderScene.remove(shaderQuad)
+    }
+  }, [])
+
+  const padding = 100
+
+  const showCursorRef = React.useRef(true)
+  React.useEffect(() => {
+    showCursorRef.current = true
+    const interval = setInterval(() => {
+      showCursorRef.current = !showCursorRef.current
+    }, 500)
+    return () => clearInterval(interval)
+  }, [props.screenState])
+
+  useFrame((state) => {
+    if (!resources) return
+    const {
+      ctx,
+      canvasTexture,
+      renderTarget,
+      shaderScene,
+      shaderQuad,
+      shaderCamera,
+      img,
+    } = resources
+
+    shaderQuad.material.uniforms.u_time.value = state.clock.elapsedTime
+
+    ctx.fillStyle = "rgba(5, 0, 5, 1)"
+    ctx.fillRect(0, 0, screenWidth, screenHeight)
+
+    switch (props.screenState._tag) {
+      case "instructions": {
+        ctx.drawImage(img, 0, 0, screenWidth, screenHeight)
+        break
+      }
+      case "waves": {
+        ctx.fillStyle = "rgba(255, 0, 255, 1)"
+        ctx.textAlign = "left"
+        ctx.textBaseline = "top"
+        ctx.font = "100px VT323-Regular"
+
+        drawLines(
+          ctx,
+          waves,
+          padding,
+          padding,
+          screenWidth - padding,
+          screenHeight - padding,
+          120,
+          false
+        )
+        break
+      }
+      case "wave_display": {
+        ctx.fillStyle = "rgba(255, 0, 255, 1)"
+        ctx.textAlign = "left"
+        ctx.textBaseline = "top"
+        ctx.font = "100px VT323-Regular"
+
+        drawLines(
+          ctx,
+          props.screenState.wave.lines,
+          padding,
+          padding,
+          screenWidth - padding,
+          screenHeight - padding,
+          120,
+          false
+        )
+
+        ctx.textAlign = "right"
+        ctx.textBaseline = "bottom"
+        ctx.fillText(
+          `${props.screenState.selected + 1}/${props.screenState.total}`,
+          screenWidth - padding,
+          screenHeight - padding
+        )
+        break
+      }
+      case "message_input": {
+        const lines = props.screenState.lines
+        const charCount = lines.reduce((acc, line) => acc + line.length, 0)
+        const remaining = 140 - charCount
+
+        ctx.fillStyle = "rgba(255, 0, 255, 1)"
+        ctx.textAlign = "left"
+        ctx.textBaseline = "top"
+        ctx.font = "100px VT323-Regular"
+
+        drawLines(
+          ctx,
+          lines,
+          padding,
+          padding,
+          screenWidth - padding,
+          screenHeight - padding,
+          120,
+          showCursorRef.current
+        )
+
+        ctx.textAlign = "right"
+        ctx.textBaseline = "bottom"
+        ctx.fillStyle = "rgba(255, 0, 255, 1)"
+        ctx.fillText(
+          remaining === 0 ? "MAX" : remaining.toString(),
+          screenWidth - padding,
+          screenHeight - padding
+        )
+        break
+      }
+    }
+
+    canvasTexture.needsUpdate = true
+
+    gl.setRenderTarget(renderTarget)
+    gl.render(shaderScene, shaderCamera)
+    gl.setRenderTarget(null)
+
+    const region = new THREE.Box2(
+      new THREE.Vector2(0, 0),
+      new THREE.Vector2(screenWidth, screenHeight)
+    )
+
+    gl.copyTextureToTexture(
+      renderTarget.texture,
+      gltf.nodes.Body.material.map,
+      region,
+      screenContentsPos
+    )
+  })
+
+  const onPointerEnterInteractable = useCallback(
+    (ev: ThreeEvent<PointerEvent>) => {
+      ev.stopPropagation()
+      document.body.style.cursor = "pointer"
+    },
+    []
+  )
+
+  const onPointerLeaveInteractable = useCallback(
+    (ev: ThreeEvent<PointerEvent>) => {
+      ev.stopPropagation()
+      document.body.style.cursor = "auto"
+    },
+    []
+  )
+
+  const onPointerDown = useCallback(
+    (ev: ThreeEvent<MouseEvent>) => {
+      ev.stopPropagation()
+
+      if (ev.button === 0) {
+        props.onKnobNext?.()
+      } else if (ev.button === 2) {
+        props.onKnobPrev?.()
+      }
+    },
+    [props.onKnobNext, props.onKnobPrev]
+  )
+
+  const onContextMenu = useCallback((ev: ThreeEvent<MouseEvent>) => {
+    ev.stopPropagation()
+    ev.nativeEvent.preventDefault()
+  }, [])
+
+  const waveButtonZ = useMemo(() => {
+    switch (props.waveButtonState) {
+      case "pressed":
+        return 0.175711
+      case "half-pressed":
+        return (gltf.nodes.Wave_Button_Body.position.z + 0.175711) / 2
+      case "released":
+        return gltf.nodes.Wave_Button_Body.position.z
+    }
+  }, [props.waveButtonState])
+
+  if (!resources) return null
+  const { renderTarget } = resources
 
   return (
-    <group dispose={null} scale={4} position={position} {...props}>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Body.geometry}
-        material={nodes.Body.material}
-      ></mesh>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Knob_Top.geometry}
-        material={nodes.Knob_Top.material}
-        position={nodes.Knob_Top.position}
-        rotation={[0, 0, knobRotationRad]}
-        onClick={(e) => {
-          e.stopPropagation()
-          onKnobForwards()
-        }}
-        onContextMenu={(e) => {
-          e.nativeEvent.preventDefault()
-          e.stopPropagation()
-          onKnobBackwards()
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation()
-          setPointerOn(true)
-          onKnobPointerOver()
-        }}
-        onPointerOut={(e) => {
-          e.stopPropagation()
-          setPointerOn(false)
-          onKnobPointerOut()
-        }}
-      ></mesh>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Knob_Top_Rim.geometry}
-        material={nodes.Knob_Top_Rim.material}
-        position={nodes.Knob_Top_Rim.position}
-        onClick={(e) => {
-          e.stopPropagation()
-          onKnobForwards()
-        }}
-        onContextMenu={(e) => {
-          e.stopPropagation()
-          e.nativeEvent.preventDefault()
-          onKnobBackwards()
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation()
-          setPointerOn(true)
-          onKnobPointerOver()
-        }}
-        onPointerOut={(e) => {
-          e.stopPropagation()
-          setPointerOn(false)
-          onKnobPointerOut()
-        }}
-      ></mesh>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Small_Button.geometry}
-        material={nodes.Small_Button.material}
-        position={nodes.Small_Button.position}
-      ></mesh>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Wave_Button_Body.geometry}
-        material={nodes.Wave_Button_Body.material}
-        position={buttonPosition}
-        onClick={onWaveButtonPress}
-        onPointerOver={() => {
-          setPointerOn(true)
-          onWaveButtonPointerOver()
-        }}
-        onPointerOut={() => {
-          setPointerOn(false)
-          onWaveButtonPointerOut()
-        }}
-      ></mesh>
-      <mesh
-        castShadow
-        receiveShadow
-        geometry={nodes.Wave_Button_Rim.geometry}
-        material={nodes.Wave_Button_Rim.material}
-        position={nodes.Wave_Button_Rim.position}
-      ></mesh>
-    </group>
-  )
-}
+    <>
+      <group position={[0, 1000, 0]} scale={[ratio, 1, 1]}>
+        <Plane position={[0, 0, -0.0001]} scale={1.1}>
+          <meshBasicMaterial color="white" />
+        </Plane>
+        <Plane position={[0, 0, 0]}>
+          <meshStandardMaterial map={renderTarget.texture} />
+        </Plane>
+      </group>
 
-window.createImageBitmap = undefined
-useGLTF.preload("/tv.glb")
+      <group {...props} ref={ref}>
+        <mesh
+          position={gltf.nodes.Body.position}
+          geometry={gltf.nodes.Body.geometry}
+          material={gltf.nodes.Body.material}
+        />
+        <mesh
+          position={gltf.nodes.Knob_Top.position}
+          rotation={[0, 0, knobRotationRad[props.knobPosition]]}
+          geometry={gltf.nodes.Knob_Top.geometry}
+          material={gltf.nodes.Knob_Top.material}
+          onPointerEnter={onPointerEnterInteractable}
+          onPointerLeave={onPointerLeaveInteractable}
+          onPointerDown={onPointerDown}
+          onContextMenu={onContextMenu}
+        />
+        <mesh
+          position={gltf.nodes.Knob_Top_Rim.position}
+          geometry={gltf.nodes.Knob_Top_Rim.geometry}
+          material={gltf.nodes.Knob_Top_Rim.material}
+        />
+        <mesh
+          position={[
+            gltf.nodes.Wave_Button_Body.position.x,
+            gltf.nodes.Wave_Button_Body.position.y,
+            waveButtonZ,
+          ]}
+          geometry={gltf.nodes.Wave_Button_Body.geometry}
+          material={gltf.nodes.Wave_Button_Body.material}
+          onPointerEnter={onPointerEnterInteractable}
+          onPointerLeave={onPointerLeaveInteractable}
+          onPointerDown={props.onWaveButtonPress}
+        />
+        <mesh
+          position={gltf.nodes.Wave_Button_Rim.position}
+          geometry={gltf.nodes.Wave_Button_Rim.geometry}
+          material={gltf.nodes.Wave_Button_Rim.material}
+        />
+        <mesh
+          position={gltf.nodes.Small_Button.position}
+          geometry={gltf.nodes.Small_Button.geometry}
+          material={gltf.nodes.Small_Button.material}
+        />
+      </group>
+    </>
+  )
+})
+
+function drawLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  lineHeight: number,
+  showCursor: boolean
+) {
+  const totalHeight = lines.length * lineHeight
+  const startY = y1 + (y2 - y1 - totalHeight) / 2
+
+  lines.forEach((line, index) => {
+    const lineX = x1
+    const lineY = startY + index * lineHeight
+
+    ctx.fillText(line, lineX, lineY)
+
+    // Add blinking cursor to the last non-empty line
+    let lastNonEmptyIndex = lines.findLastIndex((line) => line.trim() !== "")
+    if (lastNonEmptyIndex === -1) lastNonEmptyIndex = 0
+    if (
+      showCursor &&
+      index === lastNonEmptyIndex &&
+      !(index === lines.length - 1 && lines[index].length === 10)
+    ) {
+      const isMaxLength = line.length >= LINE_LENGTH
+      const lineWidth = ctx.measureText(line).width
+      const cursorX = isMaxLength ? lineX : lineX + lineWidth
+      const cursorY = isMaxLength ? lineY + lineHeight : lineY
+      ctx.fillText("█", cursorX, cursorY)
+    }
+  })
+}

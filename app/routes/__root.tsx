@@ -1,3 +1,4 @@
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query"
 import {
   HeadContent,
   Outlet,
@@ -59,7 +60,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <TanStackRouterDevtools position="bottom-right" />
+        <TanStackRouterDevtools position="bottom-left" />
         <Scripts />
       </body>
     </html>

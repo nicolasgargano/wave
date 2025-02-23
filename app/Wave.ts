@@ -1,5 +1,6 @@
 export type Wave = {
   waver: string
-  message: string
+  input: string
+  lines: string[]
   timestamp: Date
 }
