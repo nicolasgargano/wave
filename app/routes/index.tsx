@@ -307,6 +307,7 @@ function Scene() {
       <directionalLight position={[1, 2, 10]} />
       <ambientLight intensity={0.5} />
       <spotLight position={[-1, 2, 7]} intensity={0.2} />
+      <fog attach="fog" color={"black"} near={10} far={100} />
       <group position={[0, -1, 0]}>
         <Ground
           rotation={[-Math.PI / 2, 0, -Math.PI / 2]}
