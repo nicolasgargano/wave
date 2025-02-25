@@ -3,9 +3,8 @@ import { useCallback, useMemo } from "react"
 import * as THREE from "three"
 import { Plane, useGLTF } from "@react-three/drei"
 import fragmentShader from "~/assets/frag.glsl?raw"
-import { Wave } from "~/Wave"
+import { LINE_LENGTH, Lines, Wave } from "~/Wave"
 import React from "react"
-import { LINE_LENGTH } from "~/utils"
 
 // These values come from viewing the UV coordinates in blender
 const [screenX1, screenY1] = [148, 4096 - 1159]
@@ -30,7 +29,10 @@ export type ScreenState =
   | {
       _tag: "message_input"
       input: string
-      lines: string[]
+      lines: Lines
+    }
+  | {
+      _tag: "loading"
     }
 
 const knobRotationRad: Record<KnobPosition, number> = {
@@ -271,6 +273,21 @@ export const TV = React.forwardRef<THREE.Group, TvProps>((props, ref) => {
         )
         break
       }
+
+      case "loading": {
+        ctx.fillStyle = "rgba(255, 0, 255, 1)"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.font = "100px VT323-Regular"
+
+        const centerX = screenWidth / 2
+        const centerY = screenHeight / 2
+
+        const dotsCount = Math.floor((state.clock.elapsedTime * 2) % 4)
+        const loadingText = `LOADING${".".repeat(dotsCount)}${" ".repeat(3 - dotsCount)}`
+        ctx.fillText(loadingText, centerX, centerY)
+        break
+      }
     }
 
     canvasTexture.needsUpdate = true
@@ -401,7 +418,7 @@ export const TV = React.forwardRef<THREE.Group, TvProps>((props, ref) => {
 
 function drawLines(
   ctx: CanvasRenderingContext2D,
-  lines: string[],
+  lines: readonly string[],
   x1: number,
   y1: number,
   x2: number,

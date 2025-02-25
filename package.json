@@ -30,13 +30,18 @@
     "@react-three/drei": "9.121.5",
     "@react-three/fiber": "8.17.14",
     "@tanstack/react-query": "^5.66.9",
-    "@tanstack/react-router": "^1.109.2",
-    "@tanstack/router-devtools": "^1.109.2",
-    "@tanstack/start": "^1.111.2",
+    "@tanstack/react-router": "^1.111.7",
+    "@tanstack/react-router-with-query": "^1.111.7",
+    "@tanstack/router-devtools": "^1.111.7",
+    "@tanstack/start": "^1.111.7",
+    "@upstash/ratelimit": "^2.0.5",
+    "@upstash/redis": "^1.34.4",
+    "effect": "^3.13.2",
     "leva": "^0.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "0.173.0",
+    "uuid": "^11.1.0",
     "vinxi": "^0.5.3"
   }
 }

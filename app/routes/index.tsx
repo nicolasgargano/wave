@@ -2,7 +2,6 @@ import {
   GradientTexture,
   Html,
   MeshReflectorMaterial,
-  OrbitControls,
   Text,
   useTexture,
 } from "@react-three/drei"
@@ -14,6 +13,20 @@ import { format_message } from "~/utils"
 import { Wave } from "~/Wave"
 import * as THREE from "three"
 import { LinksOverlay } from "~/components/LinksOverlay"
+import { createMiddleware, createServerFn, useServerFn } from "@tanstack/start"
+import { Schema } from "effect"
+import { db } from "~/server/db"
+import { wave } from "~/server/schema"
+import { asc } from "drizzle-orm"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
+import * as uuid from "uuid"
+import { Ratelimit } from "@upstash/ratelimit"
+import { Redis } from "@upstash/redis"
+import { getWebRequest } from "@tanstack/start/server"
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -41,22 +54,101 @@ function Home() {
   )
 }
 
-const demoWaves: Wave[] = [
-  "hello",
-  "hola",
-  "konnichiha",
-  "buongiorno",
-  "hej",
-].map((input) => ({
-  input,
-  lines: format_message(input),
-  timestamp: new Date(),
-  waver: "nico",
-}))
+// const demoWaves: Wave[] = [
+//   "hello",
+//   "hola",
+//   "konnichiha",
+//   "buongiorno",
+//   "hej",
+// ].map((input) => ({
+//   id: crypto.randomUUID(),
+//   input,
+//   lines: format_message(input),
+//   timestamp: DateTime.unsafeNow(),
+// }))
+
+export const ratelimitMiddleware = createMiddleware().server(
+  async ({ next }) => {
+    // TODO: bundler doesn't remove this from the client bundle if its outside?
+    const ratelimit = new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(10, "10 s"),
+      prefix: "wave/@upstash/ratelimit/",
+      analytics: true,
+    })
+
+    const req = getWebRequest()!
+
+    const isDev = process.env.NODE_ENV === "development"
+    if (isDev) return next()
+
+    const identifier = req.headers.get("x-forwarded-for")
+    if (!identifier) throw new Response("Unauthorized", { status: 401 })
+
+    const { success } = await ratelimit.limit(identifier)
+    if (!success) throw new Response("Rate limit exceeded", { status: 429 })
+
+    return next()
+  }
+)
+
+const getServerWaves = createServerFn({
+  method: "GET",
+})
+  .middleware([ratelimitMiddleware])
+  .handler(async () =>
+    db.select().from(wave).orderBy(asc(wave.created_at)).limit(100)
+  )
+
+const createServerWave = createServerFn({
+  method: "POST",
+})
+  .middleware([ratelimitMiddleware])
+  .validator(Schema.validateSync(Wave))
+  .handler(async ({ data }) => {
+    await db.insert(wave).values({
+      id: uuid.v7(),
+      input: data.input,
+      lines: data.lines,
+      created_at: new Date(),
+    })
+  })
 
 function Scene() {
   const [screenState, setScreenState] = React.useState<ScreenState>(() => {
     return { _tag: "instructions" }
+  })
+
+  const queryClient = useQueryClient()
+
+  const getWaves = useServerFn(getServerWaves)
+  const wavesQuery = useSuspenseQuery({
+    queryKey: ["waves"],
+    queryFn: async () => {
+      const waves = await getWaves()
+      return Schema.decodeUnknownSync(Schema.Array(Wave))(waves)
+    },
+  })
+
+  const createWave = useServerFn(createServerWave)
+  const createWaveMutation = useMutation({
+    mutationFn: async (wave: Wave) => {
+      await Promise.all([
+        createWave({ data: wave }),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
+      ])
+      return wave
+    },
+    onSuccess: (submittedWave) => {
+      const newWaves = [...wavesQuery.data, submittedWave]
+      queryClient.setQueryData(["waves"], newWaves)
+      setScreenState({
+        _tag: "wave_display",
+        selected: newWaves.length - 1,
+        wave: submittedWave,
+        total: newWaves.length,
+      })
+    },
   })
 
   const onWaveButtonPress = React.useCallback(() => {
@@ -64,17 +156,25 @@ function Scene() {
       switch (prev._tag) {
         case "instructions":
         case "waves":
-        case "wave_display":
-          return { _tag: "message_input", input: "", lines: format_message("") }
+        case "wave_display": {
+          const input = ""
+          return { _tag: "message_input", input, lines: format_message(input) }
+        }
         case "message_input":
           if (prev.input.trim() === "") return prev
-          console.log("send", prev.input) // TODO
+          const newWave: Wave = {
+            input: prev.input,
+            lines: prev.lines,
+          }
+          createWaveMutation.mutate(newWave)
+          return { _tag: "loading" }
+        case "loading":
           return prev
       }
     })
   }, [])
 
-  const total = demoWaves.length
+  const total = wavesQuery.data.length
 
   const onKnobMove = React.useCallback(
     (move: number) => {
@@ -87,30 +187,28 @@ function Scene() {
             return {
               _tag: "wave_display",
               selected: 0,
-              wave: demoWaves[0],
+              wave: wavesQuery.data[0],
               total: total,
             }
           }
           case "wave_display": {
             const i = prev.selected + move
             if (i === -1) return { _tag: "waves" }
-            if (i === total) return prev
+            if (i === total) return { _tag: "waves" }
             return {
               _tag: "wave_display",
               selected: i,
-              wave: demoWaves[i],
+              wave: wavesQuery.data[i],
               total: total,
             }
           }
+          case "loading":
+            return prev
         }
       })
     },
     [total]
   )
-
-  React.useEffect(() => {
-    console.table(screenState)
-  }, [screenState])
 
   const onKnobNext = React.useCallback(() => onKnobMove(1), [onKnobMove])
   const onKnobPrev = React.useCallback(() => onKnobMove(-1), [onKnobMove])
@@ -141,6 +239,8 @@ function Scene() {
         return "released"
       case "message_input":
         return "half-pressed"
+      case "loading":
+        return "pressed"
     }
   }, [screenState._tag])
 
@@ -152,6 +252,7 @@ function Scene() {
       case "instructions":
       case "waves":
       case "message_input":
+      case "loading":
         return "U"
       case "wave_display":
         return knobPositions[screenState.selected + 1]

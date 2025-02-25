@@ -1,7 +1,7 @@
-export const LINE_LENGTH = 26
-export const LAST_LINE_LENGTH = 10
+import { Schema } from "effect"
+import { LINE_LENGTH, LINE_LENGTH_LAST, Lines } from "./Wave"
 
-export function format_message(message: string): string[] {
+export function format_message(message: string): Lines {
   const lines: string[] = []
 
   const paragraphs = message.split(/(?<=\n)/)
@@ -41,7 +41,7 @@ export function format_message(message: string): string[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (i < lastIndexWithContent || line.endsWith("\n")) {
-      const desiredLength = i < 5 ? LINE_LENGTH : LAST_LINE_LENGTH
+      const desiredLength = i < 5 ? LINE_LENGTH : LINE_LENGTH_LAST
       lines[i] = lines[i].replace("\n", "").padEnd(desiredLength)
     }
   }
@@ -49,5 +49,5 @@ export function format_message(message: string): string[] {
   // console.table(lines.map((l) => l.replaceAll(" ", "·").replaceAll("\n", "↵")))
 
   while (lines.length < 6) lines.push("")
-  return lines
+  return Schema.validateSync(Lines)(lines)
 }
