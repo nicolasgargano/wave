@@ -46,11 +46,17 @@ function Home() {
   }, [])
 
   return (
-    <Canvas camera={{ position: [0, 3, 100], fov: 15, far: 100000 }}>
-      <Suspense>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen text-white">
+          <div className="w-8 h-8 border-4 border-[#FF69B4] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <Canvas camera={{ position: [0, 3, 100], fov: 15, far: 100000 }}>
         <Scene />
-      </Suspense>
-    </Canvas>
+      </Canvas>
+    </Suspense>
   )
 }
 
